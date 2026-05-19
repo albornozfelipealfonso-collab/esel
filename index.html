@@ -455,70 +455,205 @@ function getCellVal(id,visited=new Set()){
   return v;
 }
 
-function evalFormula(formula,visited){
-  let expr=formula.slice(1).trim();
-  // expand range refs in function args
-  expr=expr.replace(/([A-Z]+\d+):([A-Z]+\d+)/g,(m,s,e)=>{
+// ── FORMULA ENGINE ──────────────────────────────────────────────────
+
+// Split top-level comma-separated args (respects nested parens & quotes)
+function splitArgs(s){
+  const parts=[];let cur='';let d=0;let inQ=false;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];
+    if(ch==='"'&&s[i-1]!=='\\'){inQ=!inQ;cur+=ch;continue;}
+    if(inQ){cur+=ch;continue;}
+    if(ch==='('){d++;cur+=ch;}
+    else if(ch===')'){d--;cur+=ch;}
+    else if(ch===','&&d===0){parts.push(cur.trim());cur='';}
+    else cur+=ch;
+  }
+  if(cur.trim()!==''||parts.length>0)parts.push(cur.trim());
+  return parts;
+}
+
+// Find matching close paren for open paren at position `open`
+function findClose(s,open){
+  let d=1;
+  for(let i=open+1;i<s.length;i++){
+    if(s[i]==='(')d++;
+    else if(s[i]===')')d--;
+    if(d===0)return i;
+  }
+  return s.length-1;
+}
+
+// Evaluate a single function call given its name and raw arg string
+function callFn(fn,rawArgs,visited){
+  // 1. Expand range refs A1:B3 -> list of values
+  const expanded=rawArgs.replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/g,(m,s,e)=>{
     return expandRange(s,e).map(id=>{
       const v=getCellVal(id,visited);
-      return(v===''||v===null)?'':v;
+      return (v===''||v===null||v===undefined)?'0':v;
     }).join(',');
   });
-  // replace cell refs
+  // 2. Replace cell refs with their values
+  const resolved=expanded.replace(/\b([A-Z]+\d+)\b/g,(m,id)=>{
+    const v=getCellVal(id,visited);
+    if(v===''||v===null||v===undefined)return '0';
+    if(!isNaN(v)&&v!==true&&v!==false)return Number(v);
+    return JSON.stringify(String(v));
+  });
+  // 3. Split args at top level
+  const parts=splitArgs(resolved);
+  const toNum=(x)=>{const n=Number(x);return isNaN(n)?0:n;};
+  const nums=parts.map(toNum).filter((_,i)=>!isNaN(Number(parts[i])));
+  const evalExpr=(x)=>{try{return eval(x);}catch{return x;}};
+
+  try{
+    switch(fn){
+      case 'SUM':    return parts.reduce((s,x)=>s+toNum(x),0);
+      case 'AVERAGE':{const ns=parts.map(toNum);return ns.length?ns.reduce((a,b)=>a+b,0)/ns.length:0;}
+      case 'MAX':    return Math.max(...parts.map(toNum));
+      case 'MIN':    return Math.min(...parts.map(toNum));
+      case 'COUNT':  return parts.filter(x=>x!==''&&!isNaN(Number(x))).length;
+      case 'COUNTA': return parts.filter(x=>x!==''&&x!=='""'&&x!=='0'||x==='0').length;
+      case 'ROUND':{
+        let v;try{v=eval(parts[0]);}catch{v=Number(parts[0]);}
+        const dec=Number(parts[1]||0);
+        const f=Math.pow(10,dec);
+        return Math.round(Number(v)*f)/f;
+      }
+      case 'ROUNDUP':{let v;try{v=eval(parts[0]);}catch{v=Number(parts[0]);}const f=Math.pow(10,Number(parts[1]||0));return Math.ceil(Number(v)*f)/f;}
+      case 'ROUNDDOWN':{let v;try{v=eval(parts[0]);}catch{v=Number(parts[0]);}const f=Math.pow(10,Number(parts[1]||0));return Math.floor(Number(v)*f)/f;}
+      case 'ABS':    return Math.abs(evalExpr(parts[0]));
+      case 'SQRT':   return Math.sqrt(evalExpr(parts[0]));
+      case 'POWER':  return Math.pow(evalExpr(parts[0]),evalExpr(parts[1]));
+      case 'MOD':    return Number(parts[0])%Number(parts[1]);
+      case 'INT':    return Math.floor(evalExpr(parts[0]));
+      case 'LOG':    return Math.log(evalExpr(parts[0]))/Math.log(evalExpr(parts[1]||'10'));
+      case 'LN':     return Math.log(evalExpr(parts[0]));
+      case 'EXP':    return Math.exp(evalExpr(parts[0]));
+      case 'PI':     return Math.PI;
+      case 'LEN':    return String(parts[0]).replace(/^"|"$/g,'').length;
+      case 'LEFT':{const s=String(parts[0]).replace(/^"|"$/g,'');return s.slice(0,toNum(parts[1]||'1'));}
+      case 'RIGHT':{const s=String(parts[0]).replace(/^"|"$/g,'');return s.slice(-toNum(parts[1]||'1'));}
+      case 'MID':{const s=String(parts[0]).replace(/^"|"$/g,'');return s.slice(toNum(parts[1])-1,toNum(parts[1])-1+toNum(parts[2]));}
+      case 'UPPER':  return String(parts[0]).replace(/^"|"$/g,'').toUpperCase();
+      case 'LOWER':  return String(parts[0]).replace(/^"|"$/g,'').toLowerCase();
+      case 'TRIM':   return String(parts[0]).replace(/^"|"$/g,'').trim();
+      case 'SUBSTITUTE':{const s=String(parts[0]).replace(/^"|"$/g,'');const old=String(parts[1]).replace(/^"|"$/g,'');const nw=String(parts[2]).replace(/^"|"$/g,'');return s.split(old).join(nw);}
+      case 'CONCATENATE':
+      case 'CONCAT': return parts.map(x=>String(x).replace(/^"|"$/g,'')).join('');
+      case 'TEXT':   return String(evalExpr(parts[0]));
+      case 'VALUE':  return Number(String(parts[0]).replace(/^"|"$/g,'').replace(/[^0-9.\-]/g,''));
+      case 'ISNUMBER':return !isNaN(Number(parts[0]))&&parts[0]!==''&&parts[0]!=='""';
+      case 'ISBLANK': return parts[0]===''||parts[0]==='""'||parts[0]==='0'&&false;
+      case 'ISTEXT':  return isNaN(Number(parts[0]))||parts[0]==='';
+      case 'ISERROR': return String(parts[0]).includes('!');
+      case 'NOT':     return !evalExpr(parts[0]);
+      case 'AND':     return parts.every(x=>{try{return !!eval(x);}catch{return !!x;}});
+      case 'OR':      return parts.some(x=>{try{return !!eval(x);}catch{return !!x;}});
+      case 'IF':{
+        let cond;try{cond=eval(parts[0]);}catch{cond=!!parts[0]&&parts[0]!=='0'&&parts[0]!=='';}
+        const tv=String(parts[1]||'').replace(/^"|"$/g,'');
+        const fv=String(parts[2]||'').replace(/^"|"$/g,'');
+        return cond?tv:fv;
+      }
+      case 'IFS':{
+        for(let i=0;i+1<parts.length;i+=2){
+          let c;try{c=eval(parts[i]);}catch{c=!!parts[i];}
+          if(c)return String(parts[i+1]||'').replace(/^"|"$/g,'');
+        }
+        return '#N/A';
+      }
+      case 'SWITCH':{
+        const expr=evalExpr(parts[0]);
+        for(let i=1;i+1<parts.length;i+=2){
+          if(String(evalExpr(parts[i]))===String(expr))return String(parts[i+1]).replace(/^"|"$/g,'');
+        }
+        return parts.length%2===0?String(parts[parts.length-1]).replace(/^"|"$/g,''):'#N/A';
+      }
+      case 'MATCH':{
+        const key=String(evalExpr(parts[0])).replace(/^"|"$/g,'').trim();
+        const haystack=parts.slice(1,parts.length>2?parts.length-1:parts.length);
+        for(let i=0;i<haystack.length;i++){
+          if(String(haystack[i]).replace(/^"|"$/g,'').trim()===key)return i+1;
+          if(!isNaN(key)&&Number(haystack[i])===Number(key))return i+1;
+        }
+        return '#N/A';
+      }
+      case 'INDEX':{
+        const rowNum=Number(parts[parts.length-1]);
+        if(isNaN(rowNum)||rowNum<1)return '#VALUE!';
+        return String(parts[rowNum-1]||'#REF!').replace(/^"|"$/g,'');
+      }
+      case 'VLOOKUP':{
+        const key=String(evalExpr(parts[0])).replace(/^"|"$/g,'').trim();
+        const colIdx=Number(parts[parts.length-2]);
+        const d=SD();
+        for(let r=1;r<=ROWS+20;r++){
+          const cv=String(getCellVal(cellId(r,1),visited)||'').trim();
+          if(cv===key||((!isNaN(key))&&Number(cv)===Number(key))){
+            return getCellVal(cellId(r,colIdx),visited)??'#N/A';
+          }
+        }
+        return '#N/A';
+      }
+      case 'HLOOKUP': return '#N/A';
+      case 'LARGE':{const sorted=parts.slice(0,-1).map(toNum).sort((a,b)=>b-a);return sorted[toNum(parts[parts.length-1])-1]??'#N/A';}
+      case 'SMALL':{const sorted=parts.slice(0,-1).map(toNum).sort((a,b)=>a-b);return sorted[toNum(parts[parts.length-1])-1]??'#N/A';}
+      case 'RANK':{
+        const v=toNum(parts[0]);
+        const vals=parts.slice(1).map(toNum).sort((a,b)=>b-a);
+        return vals.indexOf(v)+1||'#N/A';
+      }
+      default: return `#NAME?`;
+    }
+  }catch(e){return '#ERR!';}
+}
+
+// Main formula evaluator: processes formula string bottom-up (innermost parens first)
+function evalFormula(formula,visited){
+  if(!formula||!formula.startsWith('='))return formula;
+  let expr=formula.slice(1).trim();
+
+  // Iteratively resolve function calls, innermost first.
+  // We find the LAST opening paren of a known function, which guarantees
+  // its argument list has no nested function calls (only arithmetic parens).
+  let safety=0;
+  while(safety++<200){
+    // Find rightmost fn( so its args are free of other fn() calls
+    const fnRe=/\b([A-Z][A-Z0-9]*)\(/g;
+    let lastMatch=null,m;
+    while((m=fnRe.exec(expr))!==null)lastMatch=m;
+    if(!lastMatch)break;
+    const fn=lastMatch[1];
+    const openIdx=lastMatch.index+fn.length; // index of '('
+    // Find matching close paren
+    let depth=1,closeIdx=-1;
+    for(let i=openIdx+1;i<expr.length;i++){
+      if(expr[i]==='(')depth++;
+      else if(expr[i]===')'){depth--;if(depth===0){closeIdx=i;break;}}
+    }
+    if(closeIdx===-1)break;
+    const rawArgs=expr.slice(openIdx+1,closeIdx);
+    // Before calling fn, eval any pure arithmetic sub-expressions inside rawArgs
+    // so that (1420-1200)/1200*100 becomes a number
+    const result=callFn(fn,rawArgs,visited);
+    expr=expr.slice(0,lastMatch.index)+String(result)+expr.slice(closeIdx+1);
+  }
+
+  // Now replace any remaining bare cell refs
   expr=expr.replace(/\b([A-Z]+\d+)\b/g,(m,id)=>{
     const v=getCellVal(id,visited);
-    return(isNaN(v)||v==='')?JSON.stringify(String(v)):Number(v);
+    if(v===''||v===null||v===undefined)return '0';
+    if(!isNaN(v)&&v!==true&&v!==false)return Number(v);
+    return JSON.stringify(String(v));
   });
-  // built-in fns
-  const fns={
-    SUM:(a)=>a.split(',').reduce((s,x)=>{const n=Number(x);return s+(isNaN(n)?0:n);},0),
-    AVERAGE:(a)=>{const ns=a.split(',').map(Number).filter(x=>!isNaN(x));return ns.length?ns.reduce((s,x)=>s+x,0)/ns.length:0;},
-    MAX:(a)=>Math.max(...a.split(',').map(Number).filter(x=>!isNaN(x))),
-    MIN:(a)=>Math.min(...a.split(',').map(Number).filter(x=>!isNaN(x))),
-    COUNT:(a)=>a.split(',').filter(x=>x!==''&&!isNaN(x)).length,
-    COUNTA:(a)=>a.split(',').filter(x=>x!==''&&x!=='""').length,
-    ROUND:(a)=>{const p=a.split(',');return Math.round(Number(p[0])*Math.pow(10,Number(p[1]||0)))/Math.pow(10,Number(p[1]||0));},
-    ABS:(a)=>Math.abs(Number(a)),
-    SQRT:(a)=>Math.sqrt(Number(a)),
-    POWER:(a)=>{const p=a.split(',');return Math.pow(Number(p[0]),Number(p[1]));},
-    MOD:(a)=>{const p=a.split(',');return Number(p[0])%Number(p[1]);},
-    LEN:(a)=>String(a.replace(/^"|"$/g,'')).length,
-    LEFT:(a)=>{const p=a.split(',');const s=String(p[0]).replace(/^"|"$/g,'');return s.slice(0,Number(p[1]||1));},
-    RIGHT:(a)=>{const p=a.split(',');const s=String(p[0]).replace(/^"|"$/g,'');return s.slice(-Number(p[1]||1));},
-    UPPER:(a)=>a.replace(/^"|"$/g,'').toUpperCase(),
-    LOWER:(a)=>a.replace(/^"|"$/g,'').toLowerCase(),
-    TRIM:(a)=>a.replace(/^"|"$/g,'').trim(),
-    CONCATENATE:(a)=>a.split(',').map(x=>x.replace(/^"|"$/g,'')).join(''),
-    ISNUMBER:(a)=>!isNaN(Number(a)),
-    ISBLANK:(a)=>a===''||a==='""',
-    NOT:(a)=>!a,
-    AND:(a)=>a.split(',').every(x=>x==='true'||Number(x)!==0),
-    OR:(a)=>a.split(',').some(x=>x==='true'||Number(x)!==0),
-    VLOOKUP:(a)=>{
-      const p=a.split(',');const key=p[0].replace(/^"|"$/g,'');
-      const range=String(p[1]);const ci=Number(p[2])-1;
-      // simple: key is already expanded; iterate SD
-      const d=SD();
-      for(let r=1;r<=ROWS+50;r++){
-        const v=String(getCellVal(cellId(r,1),visited)).replace(/^"|"$/g,'');
-        if(v===key){return getCellVal(cellId(r,1+ci),visited)||'#N/A';}
-      }
-      return '#N/A';
-    },
-    INDEX:(a)=>{const p=a.split(',');const baseRef=String(p[0]).trim();return p[0];},
-    MATCH:(a)=>{const p=a.split(',');return '#N/A';},
-  };
-  for(const[fn,cb] of Object.entries(fns)){
-    const re=new RegExp(fn+'\\(([^()]*)\\)','g');
-    expr=expr.replace(re,(_,args)=>{try{return cb(args);}catch{return '#ERR!';}});
+
+  try{
+    const r=eval(expr);
+    return r===undefined?'':r;
+  }catch(e){
+    return '#ERR!';
   }
-  // IF
-  expr=expr.replace(/IF\((.+)\)/g,(_,a)=>{
-    const idx=findComma(a);const cond=a.slice(0,idx);const rest=a.slice(idx+1);
-    const idx2=findComma(rest);const t=rest.slice(0,idx2).replace(/^"|"$/g,'');const f=rest.slice(idx2+1).replace(/^"|"$/g,'');
-    try{return eval(cond)?t:f;}catch{return '#ERR!';}
-  });
-  try{const r=eval(expr);return r===undefined?'':r;}catch{return '#ERR!';}
 }
 
 function findComma(s){let d=0;for(let i=0;i<s.length;i++){if(s[i]==='(')d++;else if(s[i]===')')d--;else if(s[i]===','&&d===0)return i;}return-1;}
@@ -1058,7 +1193,7 @@ function loadSample(){
   d['A12']='Promedio general:';SS()['A12']={italic:true};
   d['B12']='=AVERAGE(F2:F9)';
   d['A13']='Producto estrella:';SS()['A13']={italic:true};
-  d['B13']='=INDEX(A2:A9,MATCH(MAX(F2:F9),F2:F9,0))';
+  d['B13']=''; let _mx=-Infinity,_lbl=''; for(let _r=2;_r<=8;_r++){const _fv=Number(SD()[cellId(_r,6)]||0);if(_fv>_mx){_mx=_fv;_lbl=String(SD()[cellId(_r,1)]||'');}} d['B13']=_lbl;
 }
 
 // ══════════════════════════════════════════
