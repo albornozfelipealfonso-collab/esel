@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planilla — Tu hoja de cálculo</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f11;--bg2:#18181c;--bg3:#22222a;--bg4:#2a2a34;
+  --border:#333340;--border2:#44445a;
+  --text:#e8e8f0;--text2:#9090a8;--text3:#5a5a70;
+  --accent:#7c6af7;--accent2:#5a4ed4;--accent3:#a89af9;
+  --green:#3ecf8e;--amber:#f5a623;--red:#f25f5c;--blue:#4da6ff;
+  --cell-h:26px;--col-w:100px;--row-head-w:48px;
+  --font-ui:'Sora',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --radius:6px;--radius-lg:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOP BAR ── */
+#topbar{display:flex;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+#logo{padding:0 18px;font-weight:600;font-size:15px;color:var(--accent3);letter-spacing:-0.3px;border-right:1px solid var(--border);height:42px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+#logo span{color:var(--text3);font-weight:400}
+#menubar{display:flex;align-items:center;gap:0;height:42px;flex:1;overflow-x:auto}
+.menu-group{display:flex;align-items:center;gap:2px;padding:0 10px;border-right:1px solid var(--border);height:100%}
+.menu-group:last-child{border-right:none}
+.tb-btn{display:flex;align-items:center;gap:5px;padding:5px 9px;border:none;background:transparent;color:var(--text2);font-family:var(--font-ui);font-size:12px;cursor:pointer;border-radius:var(--radius);white-space:nowrap;transition:all .15s}
+.tb-btn:hover{background:var(--bg3);color:var(--text)}
+.tb-btn.active{background:var(--bg4);color:var(--accent3)}
+.tb-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.tb-btn.danger:hover{color:var(--red)}
+select.tb-sel{padding:5px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--font-ui);font-size:12px;cursor:pointer;border-radius:var(--radius);outline:none}
+select.tb-sel:hover{border-color:var(--border2);color:var(--text)}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* ── FORMULA BAR ── */
+#formulabar{display:flex;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:34px}
+#cell-ref-box{width:72px;padding:0 10px;font-family:var(--font-mono);font-size:12px;background:var(--bg3);border-right:1px solid var(--border);height:100%;display:flex;align-items:center;color:var(--accent3);font-weight:500;flex-shrink:0}
+#fx-label{padding:0 10px;color:var(--text3);font-family:var(--font-mono);font-size:13px;border-right:1px solid var(--border);height:100%;display:flex;align-items:center;flex-shrink:0}
+#formula-input{flex:1;height:100%;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:0 12px;caret-color:var(--accent3)}
+#formula-input::placeholder{color:var(--text3)}
+#status-right{padding:0 16px;font-size:11px;color:var(--text3);display:flex;gap:16px;align-items:center;flex-shrink:0}
+.stat{display:flex;gap:5px}
+.stat-label{color:var(--text3)}
+.stat-val{color:var(--text2);font-family:var(--font-mono)}
+
+/* ── MAIN AREA ── */
+#workspace{display:flex;flex:1;overflow:hidden}
+#sheet-wrap{flex:1;overflow:auto;position:relative}
+#sheet-wrap::-webkit-scrollbar{width:8px;height:8px}
+#sheet-wrap::-webkit-scrollbar-track{background:var(--bg)}
+#sheet-wrap::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+#sheet-wrap::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* ── GRID ── */
+table{border-collapse:collapse;table-layout:fixed}
+.col-head{position:sticky;top:0;z-index:10;background:var(--bg2);border:none;border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--text3);font-size:11px;font-weight:500;font-family:var(--font-ui);text-align:center;width:var(--col-w);min-width:var(--col-w);height:28px;padding:0;user-select:none;cursor:pointer;transition:background .1s}
+.col-head:hover{background:var(--bg3);color:var(--text2)}
+.col-head.selected-col{background:var(--bg4);color:var(--accent3)}
+.corner-head{position:sticky;top:0;left:0;z-index:11;background:var(--bg2);border:none;border-bottom:1px solid var(--border);border-right:1px solid var(--border);width:var(--row-head-w);min-width:var(--row-head-w)}
+.row-head{position:sticky;left:0;z-index:5;background:var(--bg2);border:none;border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--text3);font-size:11px;font-weight:500;font-family:var(--font-mono);text-align:right;padding:0 8px;width:var(--row-head-w);min-width:var(--row-head-w);height:var(--cell-h);user-select:none;cursor:pointer;transition:background .1s}
+.row-head:hover{background:var(--bg3);color:var(--text2)}
+.row-head.selected-row{background:var(--bg4);color:var(--accent3)}
+td.cell{border:none;border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:0;height:var(--cell-h);width:var(--col-w);min-width:var(--col-w);position:relative;overflow:hidden;background:var(--bg)}
+td.cell:hover:not(.editing){background:var(--bg2)}
+td.cell.in-range{background:rgba(124,106,247,0.07)}
+td.cell.selected{background:rgba(124,106,247,0.12);outline:1.5px solid var(--accent);outline-offset:-1px}
+td.cell.editing{background:var(--bg2);outline:2px solid var(--accent3);outline-offset:-1px;z-index:20}
+td.cell.has-bold .cv{font-weight:600}
+td.cell.has-italic .cv{font-style:italic}
+td.cell.align-right .cv{text-align:right}
+td.cell.align-center .cv{text-align:center}
+td.cell.c-green{color:var(--green)}
+td.cell.c-amber{color:var(--amber)}
+td.cell.c-red{color:var(--red)}
+td.cell.c-blue{color:var(--blue)}
+.cv{display:block;width:100%;height:100%;padding:0 5px;font-size:12px;line-height:var(--cell-h);overflow:hidden;white-space:nowrap;font-family:var(--font-mono);color:inherit;cursor:cell}
+.cv.num{text-align:right}
+.cv.err{color:var(--red);font-size:11px}
+input.cell-input{width:100%;height:100%;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:0 5px}
+.hidden-row td{display:none}
+.hidden-row .row-head{display:table-cell}
+
+/* ── SIDE PANEL ── */
+#sidepanel{width:280px;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg2);flex-shrink:0;transition:width .2s}
+#sidepanel.collapsed{width:0;overflow:hidden}
+#panel-header{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:10px 0;font-size:11px;text-align:center;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s;font-weight:500;letter-spacing:.3px}
+.ptab:hover{color:var(--text2)}
+.ptab.active{color:var(--accent3);border-bottom-color:var(--accent)}
+#panel-body{flex:1;overflow-y:auto;padding:14px}
+#panel-body::-webkit-scrollbar{width:5px}
+#panel-body::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+.panel-section{margin-bottom:18px}
+.panel-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;font-weight:600}
+.panel-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.panel-row label{font-size:11px;color:var(--text2);flex:1}
+.panel-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:12px;padding:5px 8px;border-radius:var(--radius);outline:none;width:100%}
+.panel-input:focus{border-color:var(--accent)}
+.panel-btn{width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--font-ui);font-size:12px;cursor:pointer;border-radius:var(--radius);transition:all .15s;margin-bottom:4px}
+.panel-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+.panel-btn.primary{background:rgba(124,106,247,0.15);border-color:rgba(124,106,247,0.4);color:var(--accent3)}
+.panel-btn.primary:hover{background:rgba(124,106,247,0.25)}
+.chart-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--bg);padding:10px;margin-bottom:12px}
+
+/* ── PIVOT ── */
+.pivot-table{width:100%;font-size:11px;border-collapse:collapse}
+.pivot-table th{text-align:left;padding:6px 8px;color:var(--text3);border-bottom:1px solid var(--border);font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.pivot-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:11px}
+.pivot-table tr:last-child td{border-bottom:none;color:var(--accent3);font-weight:600}
+.pivot-bar{height:3px;border-radius:2px;background:var(--accent);margin-top:3px;transition:width .3s}
+
+/* ── FILTER ── */
+.filter-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.filter-item:last-child{border-bottom:none}
+.filter-item label{font-size:12px;color:var(--text2);flex:1;cursor:pointer}
+input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+.filter-col-sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:12px;padding:6px 8px;border-radius:var(--radius);outline:none;width:100%;margin-bottom:10px}
+.filter-col-sel:focus{border-color:var(--accent)}
+.filter-search{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:6px 8px;border-radius:var(--radius);outline:none;margin-bottom:8px}
+.filter-search:focus{border-color:var(--accent)}
+
+/* ── TABS ── */
+#tabsbar{display:flex;align-items:center;gap:4px;padding:5px 10px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0;overflow-x:auto}
+#tabsbar::-webkit-scrollbar{height:3px}
+#tabsbar::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+.sheet-tab{padding:4px 14px;font-size:11px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text3);white-space:nowrap;transition:all .15s;font-family:var(--font-ui)}
+.sheet-tab:hover{background:var(--bg3);color:var(--text2);border-color:var(--border2)}
+.sheet-tab.active{background:rgba(124,106,247,0.15);color:var(--accent3);border-color:rgba(124,106,247,0.4)}
+.sheet-tab-add{padding:4px 10px;font-size:13px;border:1px dashed var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
+.sheet-tab-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── CONTEXT MENU ── */
+#ctxmenu{position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:6px;z-index:1000;display:none;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.ctx-item{padding:7px 12px;font-size:12px;cursor:pointer;border-radius:var(--radius);color:var(--text2);display:flex;align-items:center;gap:8px;transition:background .1s}
+.ctx-item:hover{background:var(--bg4);color:var(--text)}
+.ctx-item.danger:hover{color:var(--red)}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 18px;border-radius:var(--radius-lg);font-size:12px;opacity:0;transition:all .3s;pointer-events:none;z-index:2000}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── MODAL ── */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center}
+#modal-overlay.show{display:flex}
+#modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:24px;width:380px;max-width:90vw}
+#modal h3{font-size:15px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.modal-row{margin-bottom:12px}
+.modal-row label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.modal-row input,.modal-row select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:var(--radius);outline:none}
+.modal-row input:focus,.modal-row select:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.modal-actions button{padding:8px 18px;border-radius:var(--radius);font-family:var(--font-ui);font-size:13px;cursor:pointer;border:1px solid var(--border)}
+.modal-actions .btn-cancel{background:transparent;color:var(--text2)}
+.modal-actions .btn-cancel:hover{background:var(--bg3)}
+.modal-actions .btn-ok{background:rgba(124,106,247,0.2);border-color:rgba(124,106,247,0.5);color:var(--accent3)}
+.modal-actions .btn-ok:hover{background:rgba(124,106,247,0.3)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a89af9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    Planilla <span>beta</span>
+  </div>
+  <div id="menubar">
+    <div class="menu-group">
+      <button class="tb-btn" onclick="newFile()" title="Nuevo">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Nuevo
+      </button>
+      <button class="tb-btn" onclick="exportXLSX()" title="Exportar XLSX">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>XLSX
+      </button>
+      <button class="tb-btn" onclick="exportCSV()" title="Exportar CSV">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+      </button>
+      <label class="tb-btn" title="Importar CSV/XLSX">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar
+        <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
+      </label>
+    </div>
+    <div class="menu-group">
+      <button class="tb-btn" id="btn-bold" onclick="toggleFormat('bold')" title="Negrita">
+        <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-italic" onclick="toggleFormat('italic')" title="Cursiva">
+        <svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+      </button>
+      <div class="sep"></div>
+      <button class="tb-btn" onclick="toggleFormat('align-left')" title="Izquierda">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+      </button>
+      <button class="tb-btn" onclick="toggleFormat('align-center')" title="Centro">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
+      <button class="tb-btn" onclick="toggleFormat('align-right')" title="Derecha">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="menu-group">
+      <select class="tb-sel" id="color-sel" onchange="applyColor(this.value)" title="Color de texto">
+        <option value="">Color</option>
+        <option value="c-green">🟢 Verde</option>
+        <option value="c-amber">🟡 Ámbar</option>
+        <option value="c-red">🔴 Rojo</option>
+        <option value="c-blue">🔵 Azul</option>
+        <option value="">⚪ Quitar</option>
+      </select>
+      <select class="tb-sel" id="fn-sel" onchange="insertFn(this.value)">
+        <option value="">ƒ Función…</option>
+        <optgroup label="Matemáticas">
+          <option value="=SUM(">=SUM(</option>
+          <option value="=AVERAGE(">=AVERAGE(</option>
+          <option value="=MAX(">=MAX(</option>
+          <option value="=MIN(">=MIN(</option>
+          <option value="=COUNT(">=COUNT(</option>
+          <option value="=ROUND(">=ROUND(</option>
+          <option value="=ABS(">=ABS(</option>
+          <option value="=SQRT(">=SQRT(</option>
+          <option value="=POWER(">=POWER(</option>
+          <option value="=MOD(">=MOD(</option>
+        </optgroup>
+        <optgroup label="Lógicas">
+          <option value="=IF(">=IF(</option>
+          <option value="=AND(">=AND(</option>
+          <option value="=OR(">=OR(</option>
+          <option value="=NOT(">=NOT(</option>
+          <option value="=ISNUMBER(">=ISNUMBER(</option>
+          <option value="=ISBLANK(">=ISBLANK(</option>
+        </optgroup>
+        <optgroup label="Texto">
+          <option value="=CONCATENATE(">=CONCATENATE(</option>
+          <option value="=LEFT(">=LEFT(</option>
+          <option value="=RIGHT(">=RIGHT(</option>
+          <option value="=LEN(">=LEN(</option>
+          <option value="=UPPER(">=UPPER(</option>
+          <option value="=LOWER(">=LOWER(</option>
+          <option value="=TRIM(">=TRIM(</option>
+        </optgroup>
+        <optgroup label="Búsqueda">
+          <option value="=VLOOKUP(">=VLOOKUP(</option>
+          <option value="=HLOOKUP(">=HLOOKUP(</option>
+          <option value="=MATCH(">=MATCH(</option>
+          <option value="=INDEX(">=INDEX(</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="menu-group">
+      <button class="tb-btn" onclick="insertRow()" title="Insertar fila">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/><line x1="12" y1="10.5" x2="12" y2="13.5"/></svg>+Fila
+      </button>
+      <button class="tb-btn" onclick="insertCol()" title="Insertar columna">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/><line x1="10.5" y1="12" x2="13.5" y2="12"/></svg>+Col
+      </button>
+      <button class="tb-btn danger" onclick="deleteRowCmd()" title="Eliminar fila">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>
+    <div class="menu-group">
+      <button class="tb-btn" onclick="openFilterPanel()" title="Filtros">
+        <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filtrar
+      </button>
+      <button class="tb-btn" onclick="openPivotPanel()" title="Tabla dinámica">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Pivot
+      </button>
+      <button class="tb-btn" onclick="openChartPanel()" title="Gráfico">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Gráfico
+      </button>
+    </div>
+    <div class="menu-group">
+      <button class="tb-btn" onclick="saveLocal()" title="Guardar en navegador">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
+      </button>
+      <button class="tb-btn" onclick="loadLocal()" title="Cargar guardado">
+        <svg viewBox="0 0 24 24"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Cargar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FORMULA BAR -->
+<div id="formulabar">
+  <div id="cell-ref-box">A1</div>
+  <div id="fx-label"><i>fx</i></div>
+  <input id="formula-input" placeholder="Escribe un valor o fórmula  →  =SUM(A1:A5)  |  =IF(B2>100,&quot;Alto&quot;,&quot;Bajo&quot;)  |  =VLOOKUP(A2,C:D,2,0)" oninput="onFormulaInput()" onkeydown="onFormulaKey(event)">
+  <div id="status-right">
+    <div class="stat"><span class="stat-label">SUM</span><span class="stat-val" id="st-sum">—</span></div>
+    <div class="stat"><span class="stat-label">AVG</span><span class="stat-val" id="st-avg">—</span></div>
+    <div class="stat"><span class="stat-label">COUNT</span><span class="stat-val" id="st-cnt">—</span></div>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div id="workspace">
+  <div id="sheet-wrap"><table id="grid"></table></div>
+  <div id="sidepanel">
+    <div id="panel-header">
+      <div class="ptab active" onclick="switchPanel('chart')">Gráfico</div>
+      <div class="ptab" onclick="switchPanel('pivot')">Pivot</div>
+      <div class="ptab" onclick="switchPanel('filter')">Filtros</div>
+    </div>
+    <div id="panel-body">
+      <div id="pane-chart">
+        <div class="panel-section">
+          <div class="panel-title">Tipo de gráfico</div>
+          <div class="panel-row">
+            <select class="panel-input" id="chart-type">
+              <option value="bar">Barras</option>
+              <option value="line">Línea</option>
+              <option value="pie">Pastel</option>
+              <option value="doughnut">Dona</option>
+              <option value="radar">Radar</option>
+              <option value="polarArea">Polar</option>
+            </select>
+          </div>
+          <div class="panel-row">
+            <label>Rango de datos</label>
+          </div>
+          <div class="panel-row">
+            <input class="panel-input" id="chart-range" placeholder="ej: A1:E7" value="A1:E7">
+          </div>
+          <div class="panel-row">
+            <label><input type="checkbox" id="chart-headers" checked style="margin-right:5px">Primera fila como etiquetas</label>
+          </div>
+          <button class="panel-btn primary" onclick="renderChart()">▶ Generar gráfico</button>
+          <button class="panel-btn" onclick="downloadChart()">↓ Descargar PNG</button>
+        </div>
+        <div class="chart-wrap"><canvas id="mychart" height="220"></canvas></div>
+      </div>
+      <div id="pane-pivot" style="display:none">
+        <div class="panel-section">
+          <div class="panel-title">Tabla dinámica</div>
+          <div class="panel-row"><label>Columna de filas (etiqueta)</label></div>
+          <select class="filter-col-sel" id="pivot-row-col"></select>
+          <div class="panel-row"><label>Columna de valores</label></div>
+          <select class="filter-col-sel" id="pivot-val-col"></select>
+          <div class="panel-row">
+            <label>Agregación</label>
+            <select class="panel-input" id="pivot-agg">
+              <option>SUM</option><option>AVERAGE</option><option>COUNT</option><option>MAX</option><option>MIN</option>
+            </select>
+          </div>
+          <button class="panel-btn primary" onclick="buildPivot()">▶ Generar tabla</button>
+        </div>
+        <div id="pivot-result"></div>
+      </div>
+      <div id="pane-filter" style="display:none">
+        <div class="panel-section">
+          <div class="panel-title">Filtrar columna</div>
+          <select class="filter-col-sel" id="filter-col-sel" onchange="loadFilterValues()"></select>
+          <input class="filter-search" id="filter-search" placeholder="Buscar valor…" oninput="filterSearch()">
+          <div id="filter-values"></div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="panel-btn" onclick="selectAllFilter()">Selec. todo</button>
+            <button class="panel-btn" onclick="clearAllFilter()">Deselec. todo</button>
+          </div>
+          <button class="panel-btn primary" onclick="applyFilterNow()" style="margin-top:6px">▶ Aplicar</button>
+          <button class="panel-btn" onclick="clearFilters()">✕ Quitar filtros</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS BAR -->
+<div id="tabsbar"></div>
+
+<!-- CONTEXT MENU -->
+<div id="ctxmenu">
+  <div class="ctx-item" onclick="ctxInsertRow()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><line x1="12" y1="13" x2="12" y2="21"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Insertar fila arriba
+  </div>
+  <div class="ctx-item" onclick="ctxInsertCol()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><line x1="13" y1="12" x2="21" y2="12"/><line x1="17" y1="8" x2="17" y2="16"/></svg>Insertar columna izq.
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" onclick="ctxDeleteRow()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Eliminar fila
+  </div>
+  <div class="ctx-item danger" onclick="ctxDeleteCol()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Eliminar columna
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="ctxClearCell()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>Limpiar celda
+  </div>
+  <div class="ctx-item" onclick="ctxCopyCell()">Copiar valor</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title">Nueva hoja</h3>
+    <div class="modal-row"><label>Nombre</label><input id="modal-input" class="panel-input"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-ok" onclick="confirmModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+const ROWS=30,COLS=16;
+let sheets={};
+let sheetNames=['Hoja 1'];
+let currentSheet='Hoja 1';
+let selCell='A1';
+let selStart=null,selEnd=null;
+let isEditing=false;
+let chartInst=null;
+let filterState={};
+let clipboard=null;
+let modalCallback=null;
+
+function getSheet(){return sheets[currentSheet]||initSheet(currentSheet);}
+function initSheet(name){sheets[name]={data:{},styles:{},hidden:{}};return sheets[name];}
+function SD(){return getSheet().data;}
+function SS(){return getSheet().styles;}
+function SH(){return getSheet().hidden;}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function colName(i){let s='';while(i>0){s=String.fromCharCode(64+(i%26||26))+s;i=Math.floor((i-1)/26);}return s;}
+function colIndex(s){let c=0;for(let ch of s)c=c*26+ch.charCodeAt(0)-64;return c;}
+function cellId(r,c){return colName(c)+r;}
+function parseRef(id){const m=String(id).match(/^\$?([A-Z]+)\$?(\d+)$/);if(!m)return null;return{row:parseInt(m[2]),col:colIndex(m[1])};}
+function expandRange(s,e){const a=parseRef(s),b=parseRef(e);if(!a||!b)return[];const cells=[];for(let r=Math.min(a.row,b.row);r<=Math.max(a.row,b.row);r++)for(let c=Math.min(a.col,b.col);c<=Math.max(a.col,b.col);c++)cells.push(cellId(r,c));return cells;}
+function numFmt(v){if(v===''||v===null||v===undefined)return '';const n=Number(v);if(isNaN(n))return v;return n%1===0?n.toLocaleString('es-CL'):n.toLocaleString('es-CL',{minimumFractionDigits:0,maximumFractionDigits:4});}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ══════════════════════════════════════════
+//  FORMULA ENGINE
+// ══════════════════════════════════════════
+function getCellVal(id,visited=new Set()){
+  const d=SD();const v=d[id];
+  if(v===undefined||v==='')return '';
+  if(typeof v==='string'&&v.startsWith('=')){
+    if(visited.has(id))return '#CIRC!';
+    return evalFormula(v,new Set([...visited,id]));
+  }
+  return v;
+}
+
+function evalFormula(formula,visited){
+  let expr=formula.slice(1).trim();
+  // expand range refs in function args
+  expr=expr.replace(/([A-Z]+\d+):([A-Z]+\d+)/g,(m,s,e)=>{
+    return expandRange(s,e).map(id=>{
+      const v=getCellVal(id,visited);
+      return(v===''||v===null)?'':v;
+    }).join(',');
+  });
+  // replace cell refs
+  expr=expr.replace(/\b([A-Z]+\d+)\b/g,(m,id)=>{
+    const v=getCellVal(id,visited);
+    return(isNaN(v)||v==='')?JSON.stringify(String(v)):Number(v);
+  });
+  // built-in fns
+  const fns={
+    SUM:(a)=>a.split(',').reduce((s,x)=>{const n=Number(x);return s+(isNaN(n)?0:n);},0),
+    AVERAGE:(a)=>{const ns=a.split(',').map(Number).filter(x=>!isNaN(x));return ns.length?ns.reduce((s,x)=>s+x,0)/ns.length:0;},
+    MAX:(a)=>Math.max(...a.split(',').map(Number).filter(x=>!isNaN(x))),
+    MIN:(a)=>Math.min(...a.split(',').map(Number).filter(x=>!isNaN(x))),
+    COUNT:(a)=>a.split(',').filter(x=>x!==''&&!isNaN(x)).length,
+    COUNTA:(a)=>a.split(',').filter(x=>x!==''&&x!=='""').length,
+    ROUND:(a)=>{const p=a.split(',');return Math.round(Number(p[0])*Math.pow(10,Number(p[1]||0)))/Math.pow(10,Number(p[1]||0));},
+    ABS:(a)=>Math.abs(Number(a)),
+    SQRT:(a)=>Math.sqrt(Number(a)),
+    POWER:(a)=>{const p=a.split(',');return Math.pow(Number(p[0]),Number(p[1]));},
+    MOD:(a)=>{const p=a.split(',');return Number(p[0])%Number(p[1]);},
+    LEN:(a)=>String(a.replace(/^"|"$/g,'')).length,
+    LEFT:(a)=>{const p=a.split(',');const s=String(p[0]).replace(/^"|"$/g,'');return s.slice(0,Number(p[1]||1));},
+    RIGHT:(a)=>{const p=a.split(',');const s=String(p[0]).replace(/^"|"$/g,'');return s.slice(-Number(p[1]||1));},
+    UPPER:(a)=>a.replace(/^"|"$/g,'').toUpperCase(),
+    LOWER:(a)=>a.replace(/^"|"$/g,'').toLowerCase(),
+    TRIM:(a)=>a.replace(/^"|"$/g,'').trim(),
+    CONCATENATE:(a)=>a.split(',').map(x=>x.replace(/^"|"$/g,'')).join(''),
+    ISNUMBER:(a)=>!isNaN(Number(a)),
+    ISBLANK:(a)=>a===''||a==='""',
+    NOT:(a)=>!a,
+    AND:(a)=>a.split(',').every(x=>x==='true'||Number(x)!==0),
+    OR:(a)=>a.split(',').some(x=>x==='true'||Number(x)!==0),
+    VLOOKUP:(a)=>{
+      const p=a.split(',');const key=p[0].replace(/^"|"$/g,'');
+      const range=String(p[1]);const ci=Number(p[2])-1;
+      // simple: key is already expanded; iterate SD
+      const d=SD();
+      for(let r=1;r<=ROWS+50;r++){
+        const v=String(getCellVal(cellId(r,1),visited)).replace(/^"|"$/g,'');
+        if(v===key){return getCellVal(cellId(r,1+ci),visited)||'#N/A';}
+      }
+      return '#N/A';
+    },
+    INDEX:(a)=>{const p=a.split(',');const baseRef=String(p[0]).trim();return p[0];},
+    MATCH:(a)=>{const p=a.split(',');return '#N/A';},
+  };
+  for(const[fn,cb] of Object.entries(fns)){
+    const re=new RegExp(fn+'\\(([^()]*)\\)','g');
+    expr=expr.replace(re,(_,args)=>{try{return cb(args);}catch{return '#ERR!';}});
+  }
+  // IF
+  expr=expr.replace(/IF\((.+)\)/g,(_,a)=>{
+    const idx=findComma(a);const cond=a.slice(0,idx);const rest=a.slice(idx+1);
+    const idx2=findComma(rest);const t=rest.slice(0,idx2).replace(/^"|"$/g,'');const f=rest.slice(idx2+1).replace(/^"|"$/g,'');
+    try{return eval(cond)?t:f;}catch{return '#ERR!';}
+  });
+  try{const r=eval(expr);return r===undefined?'':r;}catch{return '#ERR!';}
+}
+
+function findComma(s){let d=0;for(let i=0;i<s.length;i++){if(s[i]==='(')d++;else if(s[i]===')')d--;else if(s[i]===','&&d===0)return i;}return-1;}
+
+// ══════════════════════════════════════════
+//  GRID BUILD
+// ══════════════════════════════════════════
+function buildGrid(){
+  const tbl=document.getElementById('grid');
+  let h='<thead><tr><th class="corner-head"></th>';
+  for(let c=1;c<=COLS;c++)h+=`<th class="col-head" id="ch-${c}" onclick="selectCol(${c})">${colName(c)}</th>`;
+  h+='</tr></thead><tbody>';
+  for(let r=1;r<=ROWS;r++){
+    h+=`<tr id="tr-${r}"><td class="row-head" onclick="selectRow(${r})">${r}</td>`;
+    for(let c=1;c<=COLS;c++){
+      const id=cellId(r,c);
+      h+=`<td id="td-${id}" class="cell" onclick="clickCell('${id}',event)" ondblclick="dblCell('${id}')" oncontextmenu="showCtx('${id}',event)"><span class="cv" id="cv-${id}"></span></td>`;
+    }
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  tbl.innerHTML=h;
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function renderCell(id){
+  const cv=document.getElementById('cv-'+id);if(!cv)return;
+  const td=document.getElementById('td-'+id);if(!td)return;
+  const raw=SD()[id]||'';
+  const val=getCellVal(id);
+  const st=SS()[id]||{};
+  const isNum=val!==''&&!isNaN(val)&&val!==true&&val!==false;
+  const isErr=String(val).includes('!');
+  cv.className='cv'+(isNum?' num':'')+(isErr?' err':'');
+  cv.textContent=isErr?val:isNum?numFmt(val):val;
+  cv.title=raw;
+  td.className='cell'+
+    (st.bold?' has-bold':'')+
+    (st.italic?' has-italic':'')+
+    (st.align==='right'?' align-right':st.align==='center'?' align-center':'')+
+    (st.color?' '+st.color:'');
+}
+
+function renderAll(){for(let r=1;r<=ROWS;r++)for(let c=1;c<=COLS;c++)renderCell(cellId(r,c));updateStatus();}
+
+// ══════════════════════════════════════════
+//  SELECTION
+// ══════════════════════════════════════════
+function clickCell(id,e){
+  if(isEditing)commitEdit();
+  if(e.shiftKey&&selStart){selEnd=id;selCell=id;highlightRange();updateFormulaBar();}
+  else{clearHighlight();selStart=id;selEnd=null;selCell=id;document.getElementById('td-'+id)?.classList.add('selected');updateFormulaBar();}
+  updateStatus();
+}
+
+function clearHighlight(){document.querySelectorAll('.cell.selected,.cell.in-range').forEach(el=>el.classList.remove('selected','in-range'));}
+
+function highlightRange(){
+  clearHighlight();if(!selStart)return;
+  if(!selEnd){document.getElementById('td-'+selStart)?.classList.add('selected');return;}
+  const a=parseRef(selStart),b=parseRef(selEnd);if(!a||!b)return;
+  const r1=Math.min(a.row,b.row),r2=Math.max(a.row,b.row),c1=Math.min(a.col,b.col),c2=Math.max(a.col,b.col);
+  for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){
+    const td=document.getElementById('td-'+cellId(r,c));
+    if(td)td.classList.add(r===a.row&&c===a.col?'selected':'in-range');
+  }
+}
+
+function selectCol(c){
+  clearHighlight();
+  for(let r=1;r<=ROWS;r++){const td=document.getElementById('td-'+cellId(r,c));if(td)td.classList.add('in-range');}
+  selStart=cellId(1,c);selEnd=cellId(ROWS,c);selCell=cellId(1,c);updateFormulaBar();updateStatus();
+}
+
+function selectRow(r){
+  clearHighlight();
+  for(let c=1;c<=COLS;c++){const td=document.getElementById('td-'+cellId(r,c));if(td)td.classList.add('in-range');}
+  selStart=cellId(r,1);selEnd=cellId(r,COLS);selCell=cellId(r,1);updateFormulaBar();updateStatus();
+}
+
+function updateFormulaBar(){
+  document.getElementById('cell-ref-box').textContent=selCell||'';
+  document.getElementById('formula-input').value=SD()[selCell]||'';
+}
+
+function updateStatus(){
+  const cells=selEnd?expandRange(selStart,selEnd):[selStart].filter(Boolean);
+  const nums=cells.map(id=>getCellVal(id)).filter(v=>v!==''&&!isNaN(v)&&v!==true&&v!==false).map(Number);
+  const sum=nums.reduce((s,x)=>s+x,0);
+  const avg=nums.length?sum/nums.length:0;
+  document.getElementById('st-sum').textContent=nums.length?numFmt(sum):'—';
+  document.getElementById('st-avg').textContent=nums.length?numFmt(avg):'—';
+  document.getElementById('st-cnt').textContent=nums.length||'—';
+}
+
+// ══════════════════════════════════════════
+//  EDITING
+// ══════════════════════════════════════════
+function dblCell(id){
+  if(isEditing)commitEdit();
+  isEditing=true;selCell=id;
+  const td=document.getElementById('td-'+id);if(!td)return;
+  td.classList.add('editing');
+  const cv=document.getElementById('cv-'+id);cv.style.display='none';
+  const inp=document.createElement('input');
+  inp.className='cell-input';inp.value=SD()[id]||'';
+  inp.onblur=()=>{commitEdit();};
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'){e.preventDefault();commitEdit();moveCell(1,0);}
+    if(e.key==='Tab'){e.preventDefault();commitEdit();moveCell(0,e.shiftKey?-1:1);}
+    if(e.key==='Escape'){cancelEdit(id,inp);}
+  };
+  inp.oninput=()=>{document.getElementById('formula-input').value=inp.value;};
+  td.appendChild(inp);inp.focus();
+  const v=inp.value;inp.value='';inp.value=v;
+}
+
+function commitEdit(){
+  if(!isEditing)return;isEditing=false;
+  const id=selCell;
+  const td=document.getElementById('td-'+id);if(!td)return;
+  const inp=td.querySelector('input.cell-input');
+  if(inp){SD()[id]=inp.value;inp.remove();}
+  const cv=document.getElementById('cv-'+id);if(cv)cv.style.display='';
+  td.classList.remove('editing');
+  renderAll();updateFormulaBar();
+}
+
+function cancelEdit(id,inp){
+  isEditing=false;
+  inp.remove();
+  document.getElementById('td-'+id)?.classList.remove('editing');
+  document.getElementById('cv-'+id).style.display='';
+}
+
+function moveCell(dr,dc){
+  const ref=parseRef(selCell);if(!ref)return;
+  const nr=Math.max(1,Math.min(ROWS,ref.row+dr));
+  const nc=Math.max(1,Math.min(COLS,ref.col+dc));
+  const nid=cellId(nr,nc);
+  clearHighlight();selStart=nid;selEnd=null;selCell=nid;
+  document.getElementById('td-'+nid)?.classList.add('selected');
+  updateFormulaBar();
+}
+
+function onFormulaInput(){
+  if(selCell){SD()[selCell]=document.getElementById('formula-input').value;renderCell(selCell);}
+}
+function onFormulaKey(e){if(e.key==='Enter'){renderAll();document.getElementById('formula-input').blur();}}
+
+// ══════════════════════════════════════════
+//  KEYBOARD NAV
+// ══════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(isEditing)return;
+  if(document.activeElement===document.getElementById('formula-input'))return;
+  const ref=parseRef(selCell);if(!ref)return;
+  const navKeys={'ArrowUp':[-1,0],'ArrowDown':[1,0],'ArrowLeft':[0,-1],'ArrowRight':[0,1],'Tab':[0,e.shiftKey?-1:1],'Enter':[1,0]};
+  if(navKeys[e.key]){e.preventDefault();moveCell(...navKeys[e.key]);return;}
+  if(e.key==='F2'){dblCell(selCell);return;}
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(e.key==='Delete'){delete SD()[selCell];renderCell(selCell);updateFormulaBar();}
+    return;
+  }
+  if(e.key==='c'&&(e.ctrlKey||e.metaKey)){clipboard=SD()[selCell];toast('Copiado');return;}
+  if(e.key==='v'&&(e.ctrlKey||e.metaKey)&&clipboard!==null){SD()[selCell]=clipboard;renderCell(selCell);return;}
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.key.length===1){
+    dblCell(selCell);
+    const inp=document.getElementById('td-'+selCell)?.querySelector('input');
+    if(inp){inp.value=e.key;document.getElementById('formula-input').value=e.key;}
+  }
+});
+
+// ══════════════════════════════════════════
+//  FORMAT
+// ══════════════════════════════════════════
+function toggleFormat(f){
+  const cells=selEnd?expandRange(selStart,selEnd):[selCell].filter(Boolean);
+  cells.forEach(id=>{
+    const s=SS()[id]=SS()[id]||{};
+    if(f==='bold')s.bold=!s.bold;
+    else if(f==='italic')s.italic=!s.italic;
+    else if(f.startsWith('align'))s.align=f.replace('align-','');
+    renderCell(id);
+  });
+}
+function applyColor(c){
+  const cells=selEnd?expandRange(selStart,selEnd):[selCell].filter(Boolean);
+  cells.forEach(id=>{const s=SS()[id]=SS()[id]||{};s.color=c;renderCell(id);});
+  document.getElementById('color-sel').value='';
+}
+
+// ══════════════════════════════════════════
+//  FUNCTIONS INSERT
+// ══════════════════════════════════════════
+function insertFn(v){
+  if(!v)return;
+  document.getElementById('formula-input').value=v;
+  if(selCell)SD()[selCell]=v;
+  document.getElementById('fn-sel').value='';
+  document.getElementById('formula-input').focus();
+}
+
+// ══════════════════════════════════════════
+//  INSERT / DELETE ROWS & COLS
+// ══════════════════════════════════════════
+function insertRow(){const ref=parseRef(selCell);if(!ref)return;const r=ref.row;shiftRows(r,1);renderAll();toast(`Fila ${r} insertada`);}
+function deleteRowCmd(){const ref=parseRef(selCell);if(!ref)return;shiftRows(ref.row,-1);renderAll();toast('Fila eliminada');}
+function insertCol(){const ref=parseRef(selCell);if(!ref)return;shiftCols(ref.col,1);renderAll();toast('Columna insertada');}
+
+function shiftRows(fromRow,dir){
+  const d=SD();const s=SS();const nd={};const ns={};
+  Object.keys(d).forEach(id=>{
+    const ref=parseRef(id);if(!ref)return;
+    let r=ref.row;
+    if(dir>0&&r>=fromRow)r+=dir;
+    else if(dir<0&&r===fromRow){return;}
+    else if(dir<0&&r>fromRow)r+=dir;
+    nd[cellId(r,ref.col)]=d[id];
+    if(s[id])ns[cellId(r,ref.col)]=s[id];
+  });
+  getSheet().data=nd;getSheet().styles=ns;
+}
+function shiftCols(fromCol,dir){
+  const d=SD();const s=SS();const nd={};const ns={};
+  Object.keys(d).forEach(id=>{
+    const ref=parseRef(id);if(!ref)return;
+    let c=ref.col;
+    if(dir>0&&c>=fromCol)c+=dir;
+    else if(dir<0&&c===fromCol){return;}
+    else if(dir<0&&c>fromCol)c+=dir;
+    nd[cellId(ref.row,c)]=d[id];
+    if(s[id])ns[cellId(ref.row,c)]=s[id];
+  });
+  getSheet().data=nd;getSheet().styles=ns;
+}
+
+// ══════════════════════════════════════════
+//  CONTEXT MENU
+// ══════════════════════════════════════════
+let ctxCell='';
+function showCtx(id,e){e.preventDefault();ctxCell=id;const m=document.getElementById('ctxmenu');m.style.display='block';m.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';m.style.top=Math.min(e.clientY,window.innerHeight-200)+'px';}
+document.addEventListener('click',()=>document.getElementById('ctxmenu').style.display='none');
+function ctxInsertRow(){const ref=parseRef(ctxCell);if(ref)shiftRows(ref.row,1);renderAll();}
+function ctxInsertCol(){const ref=parseRef(ctxCell);if(ref)shiftCols(ref.col,1);renderAll();}
+function ctxDeleteRow(){const ref=parseRef(ctxCell);if(ref)shiftRows(ref.row,-1);renderAll();}
+function ctxDeleteCol(){const ref=parseRef(ctxCell);if(ref)shiftCols(ref.col,-1);renderAll();}
+function ctxClearCell(){delete SD()[ctxCell];renderCell(ctxCell);}
+function ctxCopyCell(){clipboard=SD()[ctxCell];toast('Copiado');}
+
+// ══════════════════════════════════════════
+//  SHEETS
+// ══════════════════════════════════════════
+function renderTabs(){
+  const bar=document.getElementById('tabsbar');
+  bar.innerHTML=sheetNames.map(n=>`<button class="sheet-tab${n===currentSheet?' active':''}" onclick="switchSheet('${n}')" ondblclick="renameSheetUI('${n}')">${n}</button>`).join('')+
+  `<button class="sheet-tab-add" onclick="addSheet()">＋</button>`;
+}
+function switchSheet(name){
+  if(isEditing)commitEdit();
+  currentSheet=name;renderAll();renderTabs();filterState={};
+  document.getElementById('pivot-result').innerHTML='';
+  updateFormulaBar();
+}
+function addSheet(){
+  const n='Hoja '+(sheetNames.length+1);
+  sheetNames.push(n);initSheet(n);switchSheet(n);
+}
+function renameSheetUI(name){
+  openModal('Renombrar hoja','Nuevo nombre',name,newName=>{
+    if(!newName||sheetNames.includes(newName))return;
+    const i=sheetNames.indexOf(name);sheetNames[i]=newName;
+    sheets[newName]=sheets[name];delete sheets[name];
+    if(currentSheet===name)currentSheet=newName;
+    renderTabs();
+  });
+}
+
+// ══════════════════════════════════════════
+//  CHART
+// ══════════════════════════════════════════
+function openChartPanel(){switchPanel('chart');}
+function renderChart(){
+  const rangeStr=document.getElementById('chart-range').value.trim();
+  const hasHeaders=document.getElementById('chart-headers').checked;
+  const type=document.getElementById('chart-type').value;
+  const m=rangeStr.match(/^([A-Z]+\d+):([A-Z]+\d+)$/i);
+  if(!m){toast('Rango inválido (ej: A1:E7)');return;}
+  const a=parseRef(m[1]),b=parseRef(m[2]);if(!a||!b)return;
+  const r1=Math.min(a.row,b.row),r2=Math.max(a.row,b.row),c1=Math.min(a.col,b.col),c2=Math.max(a.col,b.col);
+  const labels=[];
+  const rowStart=hasHeaders?r1+1:r1;
+  for(let r=rowStart;r<=r2;r++)labels.push(String(getCellVal(cellId(r,c1))||r));
+  const COLORS=['#7c6af7','#3ecf8e','#f5a623','#4da6ff','#f25f5c','#a89af9','#1d9e75'];
+  const datasets=[];
+  for(let c=c1+(hasHeaders&&c1<c2?1:0);c<=c2;c++){
+    const colLabel=hasHeaders?String(getCellVal(cellId(r1,c))||colName(c)):colName(c);
+    const vals=[];for(let r=rowStart;r<=r2;r++){const v=getCellVal(cellId(r,c));vals.push(isNaN(v)||v===''?0:Number(v));}
+    const col=COLORS[(c-c1)%COLORS.length];
+    datasets.push({label:colLabel,data:vals,backgroundColor:col+'99',borderColor:col,borderWidth:1.5,fill:type==='line'});
+  }
+  if(chartInst)chartInst.destroy();
+  Chart.defaults.color='#9090a8';Chart.defaults.borderColor='#333340';
+  chartInst=new Chart(document.getElementById('mychart'),{type,data:{labels,datasets},options:{responsive:true,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:type==='pie'||type==='doughnut'||type==='radar'||type==='polarArea'?{}:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});
+}
+function downloadChart(){
+  const canvas=document.getElementById('mychart');
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='grafico.png';a.click();
+}
+
+// ══════════════════════════════════════════
+//  PIVOT
+// ══════════════════════════════════════════
+function openPivotPanel(){switchPanel('pivot');populatePivotCols();}
+function populatePivotCols(){
+  const headers=[];for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(1,c));if(v)headers.push({label:v,c});}
+  const sel1=document.getElementById('pivot-row-col');const sel2=document.getElementById('pivot-val-col');
+  [sel1,sel2].forEach(s=>{s.innerHTML=headers.map(h=>`<option value="${h.c}">${h.label}</option>`).join('');});
+  if(headers.length>1)sel2.selectedIndex=1;
+}
+function buildPivot(){
+  const rc=parseInt(document.getElementById('pivot-row-col').value);
+  const vc=parseInt(document.getElementById('pivot-val-col').value);
+  const agg=document.getElementById('pivot-agg').value;
+  const groups={};
+  for(let r=2;r<=ROWS;r++){
+    const key=String(getCellVal(cellId(r,rc)));
+    if(!key)continue;
+    const v=getCellVal(cellId(r,vc));const n=isNaN(v)?0:Number(v);
+    if(!groups[key])groups[key]=[];
+    groups[key].push(n);
+  }
+  const results=Object.entries(groups).map(([k,vs])=>{
+    let v;
+    if(agg==='SUM')v=vs.reduce((s,x)=>s+x,0);
+    else if(agg==='AVERAGE')v=vs.reduce((s,x)=>s+x,0)/vs.length;
+    else if(agg==='COUNT')v=vs.length;
+    else if(agg==='MAX')v=Math.max(...vs);
+    else if(agg==='MIN')v=Math.min(...vs);
+    return{k,v};
+  }).sort((a,b)=>b.v-a.v);
+  const total=results.reduce((s,x)=>s+(agg==='COUNT'?x.v:x.v),0)||1;
+  let html=`<div class="panel-title">${agg} por ${document.getElementById('pivot-row-col').options[document.getElementById('pivot-row-col').selectedIndex]?.text}</div>`;
+  html+='<table class="pivot-table"><thead><tr><th>Valor</th><th>'+agg+'</th><th>%</th></tr></thead><tbody>';
+  results.forEach(({k,v})=>{
+    const pct=((v/total)*100).toFixed(1);
+    html+=`<tr><td>${k}</td><td style="text-align:right">${numFmt(v)}</td><td><div>${pct}%</div><div class="pivot-bar" style="width:${pct}%"></div></td></tr>`;
+  });
+  html+=`<tr><td>TOTAL</td><td style="text-align:right">${numFmt(total)}</td><td></td></tr>`;
+  html+='</tbody></table>';
+  document.getElementById('pivot-result').innerHTML=html;
+}
+
+// ══════════════════════════════════════════
+//  FILTER
+// ══════════════════════════════════════════
+function openFilterPanel(){switchPanel('filter');populateFilterCols();}
+function populateFilterCols(){
+  const sel=document.getElementById('filter-col-sel');
+  sel.innerHTML='';
+  for(let c=1;c<=COLS;c++){
+    const v=getCellVal(cellId(1,c));
+    if(v)sel.innerHTML+=`<option value="${c}">${v}</option>`;
+  }
+  loadFilterValues();
+}
+function loadFilterValues(){
+  const c=parseInt(document.getElementById('filter-col-sel').value);
+  const vals=new Set();
+  for(let r=2;r<=ROWS;r++){const v=String(getCellVal(cellId(r,c)));if(v)vals.add(v);}
+  filterState={};vals.forEach(v=>filterState[v]=true);
+  renderFilterValues([...vals]);
+}
+function renderFilterValues(vals){
+  document.getElementById('filter-values').innerHTML=vals.map(v=>`
+    <div class="filter-item">
+      <input type="checkbox" id="fv-${v}" ${filterState[v]!==false?'checked':''} onchange="filterState['${v}']=this.checked">
+      <label for="fv-${v}">${v}</label>
+    </div>`).join('');
+}
+function filterSearch(){
+  const q=document.getElementById('filter-search').value.toLowerCase();
+  const c=parseInt(document.getElementById('filter-col-sel').value);
+  const all=[...new Set(Array.from({length:ROWS-1},(_,i)=>String(getCellVal(cellId(i+2,c)))).filter(Boolean))];
+  renderFilterValues(all.filter(v=>v.toLowerCase().includes(q)));
+}
+function selectAllFilter(){Object.keys(filterState).forEach(k=>filterState[k]=true);loadFilterValues();}
+function clearAllFilter(){Object.keys(filterState).forEach(k=>filterState[k]=false);loadFilterValues();}
+function applyFilterNow(){
+  const c=parseInt(document.getElementById('filter-col-sel').value);
+  for(let r=2;r<=ROWS;r++){
+    const v=String(getCellVal(cellId(r,c)));
+    const tr=document.getElementById('tr-'+r);if(!tr)continue;
+    const hide=v&&filterState[v]===false;
+    Array.from(tr.querySelectorAll('td.cell')).forEach(td=>td.style.display=hide?'none':'');
+  }
+  toast('Filtro aplicado');
+}
+function clearFilters(){
+  for(let r=1;r<=ROWS;r++){
+    const tr=document.getElementById('tr-'+r);
+    if(tr)tr.querySelectorAll('td.cell').forEach(td=>td.style.display='');
+  }
+  filterState={};toast('Filtros eliminados');
+}
+
+// ══════════════════════════════════════════
+//  IMPORT / EXPORT
+// ══════════════════════════════════════════
+function importFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const lines=ev.target.result.split(/\r?\n/);
+      lines.forEach((line,ri)=>{
+        if(ri>=ROWS)return;
+        const cols=parseCSVLine(line);
+        cols.forEach((v,ci)=>{if(ci<COLS)SD()[cellId(ri+1,ci+1)]=v;});
+      });
+      renderAll();toast('CSV importado');
+    };
+    reader.readAsText(file);
+  } else if(ext==='xlsx'||ext==='xls'){
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+      json.forEach((row,ri)=>{if(ri>=ROWS)return;row.forEach((v,ci)=>{if(ci<COLS)SD()[cellId(ri+1,ci+1)]=String(v||'');});});
+      renderAll();toast('XLSX importado: '+wb.SheetNames[0]);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  e.target.value='';
+}
+
+function parseCSVLine(line){
+  const result=[];let cur='';let inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
+    else if(line[i]===','&&!inQ){result.push(cur.trim());cur='';}
+    else cur+=line[i];
+  }
+  result.push(cur.trim());return result;
+}
+
+function exportCSV(){
+  let csv='';
+  for(let r=1;r<=ROWS;r++){
+    const row=[];
+    for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(r,c));row.push(`"${String(v).replace(/"/g,'""')}"`);}
+    csv+=row.join(',')+'\n';
+  }
+  dl('planilla.csv','data:text/csv;charset=utf-8,'+encodeURIComponent(csv));
+  toast('CSV exportado');
+}
+
+function exportXLSX(){
+  const wsData=[];
+  for(let r=1;r<=ROWS;r++){
+    const row=[];
+    for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(r,c));row.push(isNaN(v)||v===''?v:Number(v));}
+    wsData.push(row);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,currentSheet);
+  XLSX.writeFile(wb,'planilla.xlsx');
+  toast('XLSX exportado');
+}
+
+function dl(name,url){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
+
+// ══════════════════════════════════════════
+//  SAVE / LOAD (localStorage)
+// ══════════════════════════════════════════
+function saveLocal(){
+  const payload={sheets,sheetNames,currentSheet};
+  localStorage.setItem('planilla_v1',JSON.stringify(payload));
+  toast('💾 Guardado en el navegador');
+}
+function loadLocal(){
+  const raw=localStorage.getItem('planilla_v1');
+  if(!raw){toast('No hay datos guardados');return;}
+  const p=JSON.parse(raw);
+  sheets=p.sheets||{};sheetNames=p.sheetNames||['Hoja 1'];currentSheet=p.currentSheet||'Hoja 1';
+  renderAll();renderTabs();updateFormulaBar();toast('Datos cargados');
+}
+function newFile(){if(confirm('¿Crear nueva hoja? Se perderán los cambios no guardados.')){sheets={};sheetNames=['Hoja 1'];currentSheet='Hoja 1';initSheet('Hoja 1');renderAll();renderTabs();updateFormulaBar();toast('Nueva hoja creada');}}
+
+// ══════════════════════════════════════════
+//  PANEL SWITCH
+// ══════════════════════════════════════════
+function switchPanel(tab){
+  document.querySelectorAll('.ptab').forEach((t,i)=>t.classList.toggle('active',['chart','pivot','filter'][i]===tab));
+  document.getElementById('pane-chart').style.display=tab==='chart'?'block':'none';
+  document.getElementById('pane-pivot').style.display=tab==='pivot'?'block':'none';
+  document.getElementById('pane-filter').style.display=tab==='filter'?'block':'none';
+}
+
+// ══════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════
+function openModal(title,label,defaultVal,cb){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-input').value=defaultVal||'';
+  document.getElementById('modal-overlay').classList.add('show');
+  modalCallback=cb;
+  setTimeout(()=>document.getElementById('modal-input').focus(),50);
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');modalCallback=null;}
+function confirmModal(){const v=document.getElementById('modal-input').value.trim();if(modalCallback)modalCallback(v);closeModal();}
+document.getElementById('modal-input').addEventListener('keydown',e=>{if(e.key==='Enter')confirmModal();if(e.key==='Escape')closeModal();});
+
+// ══════════════════════════════════════════
+//  SAMPLE DATA
+// ══════════════════════════════════════════
+function loadSample(){
+  const d=SD();
+  const headers=['Producto','Enero','Febrero','Marzo','Abril','Total','% Variación'];
+  headers.forEach((v,i)=>{d[cellId(1,i+1)]=v;SS()[cellId(1,i+1)]={bold:true};});
+  const rows=[['Laptop',1200,980,1350,1420],[' Monitor',450,520,480,510],[' Teclado',85,110,95,102],[' Mouse',45,60,55,58],[' Audífonos',120,140,160,175],[' Webcam',65,80,90,95],[' Hub USB',35,42,38,44]];
+  rows.forEach((row,ri)=>{
+    const r=ri+2;
+    row.forEach((v,ci)=>{d[cellId(r,ci+1)]=v;});
+    d[cellId(r,6)]=`=SUM(B${r}:E${r})`;
+    d[cellId(r,7)]=`=ROUND((E${r}-B${r})/B${r}*100,1)`;
+    SS()[cellId(r,7)]={color:'c-green'};
+  });
+  d[cellId(10,1)]='TOTAL';SS()[cellId(10,1)]={bold:true};
+  for(let c=2;c<=6;c++)d[cellId(10,c)]=`=SUM(${colName(c)}2:${colName(c)}9)`;
+  SS()[cellId(10,6)]={bold:true,color:'c-blue'};
+  d['A12']='Promedio general:';SS()['A12']={italic:true};
+  d['B12']='=AVERAGE(F2:F9)';
+  d['A13']='Producto estrella:';SS()['A13']={italic:true};
+  d['B13']='=INDEX(A2:A9,MATCH(MAX(F2:F9),F2:F9,0))';
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+initSheet('Hoja 1');
+buildGrid();
+loadSample();
+renderAll();
+renderTabs();
+updateFormulaBar();
+setTimeout(()=>{
+  document.getElementById('chart-range').value='A1:E8';
+  renderChart();
+},300);
+</script>
+</body>
+</html>
