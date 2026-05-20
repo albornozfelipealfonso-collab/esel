@@ -1346,59 +1346,80 @@ function clearFilters(){
 // ══════════════════════════════════════════
 function importFile(e){
   const file=e.target.files[0];if(!file)return;
-  const ext=file.name.split('.').pop().toLowerCase();
-  if(ext==='csv'){
+  // Detect type by extension AND mime type (Android sometimes omits extension)
+  const name=file.name||'';
+  const ext=name.includes('.')?name.split('.').pop().toLowerCase():'';
+  const mime=file.type||'';
+  const isXLSX=ext==='xlsx'||ext==='xls'||mime.includes('spreadsheet')||mime.includes('excel');
+  const isCSV=ext==='csv'||mime.includes('csv')||mime.includes('text/plain');
+
+  if(isCSV){
     const reader=new FileReader();
     reader.onload=ev=>{
-      const lines=ev.target.result.split(/\r?\n/);
-      lines.forEach((line,ri)=>{
-        if(ri>=ROWS)return;
-        const cols=parseCSVLine(line);
-        cols.forEach((v,ci)=>{if(ci<COLS)SD()[cellId(ri+1,ci+1)]=v;});
-      });
-      renderAll();toast('CSV importado');
-    };
-    reader.readAsText(file);
-  } else if(ext==='xlsx'||ext==='xls'){
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      const wb=XLSX.read(ev.target.result,{type:'array',cellFormula:true,cellNF:true,raw:false});
-      // Clear ALL existing sheets and start fresh with imported ones
-      sheets={};
-      sheetNames=[];
-      // Import ALL sheets
-      wb.SheetNames.forEach(sheetName=>{
-        sheetNames.push(sheetName);
-        initSheet(sheetName);
-        const ws=wb.Sheets[sheetName];
-        // Clear existing data before importing
-        sheets[sheetName].data={};
-        sheets[sheetName].styles={};
-        const target=sheets[sheetName].data;
-        // Iterate raw cells to preserve formulas
-        Object.keys(ws).forEach(addr=>{
-          if(addr.startsWith('!'))return; // skip metadata
-          const ref=parseRef(addr);
-          if(!ref||ref.row>ROWS||ref.col>COLS)return;
-          const cell=ws[addr];
-          let val='';
-          if(cell.f){
-            // Has formula — restore it with = prefix
-            val='='+cell.f;
-          } else if(cell.v!==undefined&&cell.v!==null){
-            val=String(cell.v);
-          }
-          if(val!=='')target[cellId(ref.row,ref.col)]=val;
+      try{
+        const lines=ev.target.result.split(/\r?\n/);
+        sheets={};sheetNames=['Importado'];initSheet('Importado');currentSheet='Importado';
+        lines.forEach((line,ri)=>{
+          if(!line.trim())return;
+          const cols=parseCSVLine(line);
+          cols.forEach((v,ci)=>{if(v)SD()[cellId(ri+1,ci+1)]=v;});
         });
-      });
-      // Switch to first imported sheet
-      currentSheet=wb.SheetNames[0];
-      renderAll();
-      renderTabs();
-      updateFormulaBar();
-      toast(`✓ ${wb.SheetNames.length} hoja${wb.SheetNames.length>1?'s':''} importada${wb.SheetNames.length>1?'s':''}: ${wb.SheetNames.join(', ')}`);
+        renderAll();renderTabs();updateFormulaBar();
+        toast('✓ CSV importado');
+      }catch(err){toast('Error al importar CSV: '+err.message);}
     };
+    reader.onerror=()=>toast('Error al leer el archivo');
+    reader.readAsText(file);
+  } else if(isXLSX){
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:'array',cellFormula:true,cellNF:true,raw:false});
+        if(!wb||!wb.SheetNames||wb.SheetNames.length===0){
+          toast('El archivo no tiene hojas válidas');return;
+        }
+        // Start fresh
+        sheets={};sheetNames=[];
+        wb.SheetNames.forEach(sheetName=>{
+          sheetNames.push(sheetName);
+          initSheet(sheetName);
+          const ws=wb.Sheets[sheetName];
+          if(!ws){return;}
+          const target=sheets[sheetName].data;
+          // Get sheet dimensions from !ref
+          const ref=ws['!ref'];
+          const maxR=ref?XLSX.utils.decode_range(ref).e.r+1:ROWS;
+          const maxC=ref?XLSX.utils.decode_range(ref).e.c+1:COLS;
+          Object.keys(ws).forEach(addr=>{
+            if(addr.startsWith('!'))return;
+            try{
+              const cell=ws[addr];
+              if(!cell)return;
+              // Convert address to our format
+              const decoded=XLSX.utils.decode_cell(addr);
+              const r=decoded.r+1;const c=decoded.c+1;
+              if(r<1||c<1)return;
+              let val='';
+              if(cell.f){val='='+cell.f;}
+              else if(cell.v!==undefined&&cell.v!==null){val=String(cell.v);}
+              if(val!==''&&val!=='undefined')target[cellId(r,c)]=val;
+            }catch(cellErr){}
+          });
+        });
+        currentSheet=wb.SheetNames[0];
+        // Rebuild grid if needed
+        buildGrid();
+        renderAll();renderTabs();updateFormulaBar();
+        toast('✓ '+wb.SheetNames.length+' hoja'+(wb.SheetNames.length>1?'s':'')+' importada'+(wb.SheetNames.length>1?'s':'')+': '+wb.SheetNames.join(', '));
+      }catch(err){
+        toast('Error al importar: '+err.message);
+        console.error(err);
+      }
+    };
+    reader.onerror=()=>toast('Error al leer el archivo');
     reader.readAsArrayBuffer(file);
+  } else {
+    toast('Formato no soportado. Usa .xlsx o .csv');
   }
   e.target.value='';
 }
