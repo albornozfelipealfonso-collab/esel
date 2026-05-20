@@ -189,13 +189,35 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 
 /* Mobile cell size */
 @media(max-width:768px){
-  body{font-size:12px}
+  body{
+    font-size:12px;
+    height:100svh;
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto auto 1fr auto auto;
+    overflow:hidden;
+  }
+  #workspace{
+    overflow:hidden;
+    min-height:0;
+  }
   :root{--cell-h:36px;--col-w:80px;--row-head-w:36px}
   #topbar,#formulabar{display:none!important}
   #mob-bar{display:flex}
   #mob-formulabar{display:flex}
   #sidepanel{display:none}
-  #workspace{flex-direction:column}
+  #workspace{flex-direction:column;flex:1;min-height:0;overflow:hidden}
+  #sheet-wrap{flex:1;min-height:0;overflow:auto}
+  #tabsbar{
+    flex-shrink:0 !important;
+    display:flex !important;
+    position:sticky;
+    bottom:0;
+    z-index:50;
+    min-height:52px;
+    background:#1e1e28;
+    border-top:2px solid var(--accent);
+  }
 
   /* Grid cells bigger for touch */
   td.cell{min-width:var(--col-w);height:var(--cell-h)}
