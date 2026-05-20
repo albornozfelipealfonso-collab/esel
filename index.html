@@ -125,14 +125,20 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 .filter-search:focus{border-color:var(--accent)}
 
 /* ── TABS ── */
-#tabsbar{display:flex;align-items:center;gap:4px;padding:5px 10px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0;overflow-x:auto}
+#tabsbar{display:flex;align-items:center;gap:4px;padding:6px 12px;border-top:2px solid var(--border2);background:var(--bg3);flex-shrink:0;overflow-x:auto;min-height:44px}
 #tabsbar::-webkit-scrollbar{height:3px}
 #tabsbar::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
-.sheet-tab{padding:4px 14px;font-size:11px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text3);white-space:nowrap;transition:all .15s;font-family:var(--font-ui)}
-.sheet-tab:hover{background:var(--bg3);color:var(--text2);border-color:var(--border2)}
-.sheet-tab.active{background:rgba(124,106,247,0.15);color:var(--accent3);border-color:rgba(124,106,247,0.4)}
-.sheet-tab-add{padding:4px 10px;font-size:13px;border:1px dashed var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
-.sheet-tab-add:hover{border-color:var(--accent);color:var(--accent)}
+.sheet-tab{padding:7px 18px;font-size:13px;font-weight:500;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;background:var(--bg4);color:var(--text2);white-space:nowrap;transition:all .15s;font-family:var(--font-ui)}
+.sheet-tab:hover{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+.sheet-tab.active{background:rgba(124,106,247,0.25);color:var(--accent3);border-color:var(--accent);font-weight:600}
+.sheet-tab-wrap{display:inline-flex;align-items:center;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;background:var(--bg4)}
+.sheet-tab-wrap.active{border-color:var(--accent);background:rgba(124,106,247,0.15)}
+.sheet-tab-wrap .sheet-tab{border:none;border-radius:0;background:transparent}
+.sheet-tab-wrap .sheet-tab.active{background:transparent}
+.sheet-tab-del{display:flex;align-items:center;justify-content:center;width:22px;height:100%;border:none;border-left:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:10px;padding:0;transition:all .15s;flex-shrink:0}
+.sheet-tab-del:hover{background:rgba(242,95,92,0.15);color:var(--red);border-left-color:rgba(242,95,92,0.3)}
+.sheet-tab-add{padding:7px 14px;font-size:16px;font-weight:600;border:1px dashed var(--border2);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--text2);transition:all .15s}
+.sheet-tab-add:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,106,247,0.1)}
 
 /* ── CONTEXT MENU ── */
 #ctxmenu{position:fixed;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:6px;z-index:1000;display:none;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
@@ -160,9 +166,165 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 .modal-actions .btn-cancel:hover{background:var(--bg3)}
 .modal-actions .btn-ok{background:rgba(124,106,247,0.2);border-color:rgba(124,106,247,0.5);color:var(--accent3)}
 .modal-actions .btn-ok:hover{background:rgba(124,106,247,0.3)}
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVE
+══════════════════════════════════════════ */
+
+/* Mobile toolbar */
+#mob-bar{display:none;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:48px}
+#mob-logo{padding:0 14px;font-weight:600;font-size:14px;color:var(--accent3);border-right:1px solid var(--border);height:100%;display:flex;align-items:center;gap:6px}
+#mob-actions{display:flex;align-items:center;gap:2px;padding:0 8px;flex:1;overflow-x:auto}
+.mob-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:6px 10px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:var(--radius);min-width:44px;min-height:44px;font-size:9px;font-family:var(--font-ui)}
+.mob-btn:active{background:var(--bg3);color:var(--accent3)}
+.mob-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Mobile formula bar */
+#mob-formulabar{display:none;align-items:center;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:40px}
+#mob-cell-ref{width:60px;padding:0 8px;font-family:var(--font-mono);font-size:11px;background:var(--bg3);border-right:1px solid var(--border);height:100%;display:flex;align-items:center;color:var(--accent3);font-weight:500;flex-shrink:0}
+#mob-formula-input{flex:1;height:100%;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:0 10px;caret-color:var(--accent3)}
+
+/* Mobile cell size */
+@media(max-width:768px){
+  body{font-size:12px}
+  :root{--cell-h:36px;--col-w:80px;--row-head-w:36px}
+  #topbar,#formulabar{display:none!important}
+  #mob-bar,#mob-formulabar{display:flex}
+  #sidepanel{display:none}
+  #workspace{flex-direction:column}
+
+  /* Grid cells bigger for touch */
+  td.cell{min-width:var(--col-w);height:var(--cell-h)}
+  .cv{line-height:var(--cell-h);font-size:11px}
+  .col-head{height:32px;font-size:10px}
+  .row-head{height:var(--cell-h);font-size:10px;width:var(--row-head-w);min-width:var(--row-head-w)}
+
+  /* Bottom drawer for panels */
+  #mob-drawer{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border2);border-radius:16px 16px 0 0;z-index:100;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:70vh;display:flex;flex-direction:column}
+  #mob-drawer.open{transform:translateY(0)}
+  #mob-drawer-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0}
+  #mob-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+  #mob-drawer-header h3{font-size:14px;font-weight:600;color:var(--text)}
+  #mob-drawer-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px;line-height:1}
+  #mob-drawer-body{flex:1;overflow-y:auto;padding:16px}
+
+  /* Tabs bar - mobile */
+  #tabsbar{
+    padding:8px 10px;
+    gap:8px;
+    height:auto;
+    min-height:52px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    background:#1e1e28;
+    border-top:2px solid var(--accent);
+  }
+  #tabsbar::-webkit-scrollbar{display:none}
+  .sheet-tab{
+    padding:8px 20px;
+    height:36px;
+    font-size:13px;
+    font-weight:500;
+    border:1.5px solid var(--border2);
+    border-radius:8px;
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    background:var(--bg4);
+    color:var(--text2);
+  }
+  .sheet-tab.active{
+    background:rgba(124,106,247,0.3);
+    color:#fff;
+    border-color:var(--accent3);
+    font-weight:600;
+  }
+  .sheet-tab-add{
+    padding:8px 16px;
+    height:36px;
+    border:1.5px dashed var(--accent);
+    border-radius:8px;
+    font-size:18px;
+    font-weight:600;
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    color:var(--accent3);
+    background:rgba(124,106,247,0.08);
+  }
+
+  /* Status bar on mobile */
+  #mob-status{display:flex;gap:16px;padding:6px 12px;border-top:1px solid var(--border);background:var(--bg2);font-size:11px;flex-shrink:0}
+  .mob-stat{display:flex;gap:5px}
+  .mob-stat-label{color:var(--text3)}
+  .mob-stat-val{color:var(--text2);font-family:var(--font-mono)}
+}
+@media(min-width:769px){
+  #mob-drawer{display:none!important}
+  #mob-status{display:none!important}
+}
 </style>
 </head>
 <body>
+
+<!-- MOBILE TOP BAR -->
+<div id="mob-bar">
+  <div id="mob-logo">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a89af9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    Planilla
+  </div>
+  <div id="mob-actions">
+    <button class="mob-btn" onclick="exportXLSX()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>XLSX
+    </button>
+    <button class="mob-btn" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+    </button>
+    <label class="mob-btn">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import
+      <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
+    </label>
+    <button class="mob-btn" onclick="toggleFormat('bold')">
+      <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>Bold
+    </button>
+    <button class="mob-btn" onclick="mobOpenDrawer('chart')">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Gráfico
+    </button>
+    <button class="mob-btn" onclick="mobOpenDrawer('pivot')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Pivot
+    </button>
+    <button class="mob-btn" onclick="mobOpenDrawer('filter')">
+      <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filtro
+    </button>
+    <button class="mob-btn" onclick="saveLocal()">
+      <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
+    </button>
+  </div>
+</div>
+
+<!-- MOBILE FORMULA BAR -->
+<div id="mob-formulabar">
+  <div id="mob-cell-ref">A1</div>
+  <input id="mob-formula-input" placeholder="valor o =fórmula" oninput="onMobFormulaInput()" onkeydown="onFormulaKey(event)">
+</div>
+
+<!-- MOBILE BOTTOM DRAWER -->
+<div id="mob-drawer">
+  <div id="mob-drawer-handle"></div>
+  <div id="mob-drawer-header">
+    <h3 id="mob-drawer-title">Panel</h3>
+    <button id="mob-drawer-close" onclick="mobCloseDrawer()">✕</button>
+  </div>
+  <div id="mob-drawer-body"></div>
+</div>
+
+<!-- MOBILE STATUS BAR (injected before tabsbar via JS) -->
+<div id="mob-status" style="display:none">
+  <div class="mob-stat"><span class="mob-stat-label">SUM</span><span class="mob-stat-val" id="mob-st-sum">—</span></div>
+  <div class="mob-stat"><span class="mob-stat-label">AVG</span><span class="mob-stat-val" id="mob-st-avg">—</span></div>
+  <div class="mob-stat"><span class="mob-stat-label">COUNT</span><span class="mob-stat-val" id="mob-st-cnt">—</span></div>
+</div>
+
 
 <!-- TOP BAR -->
 <div id="topbar">
@@ -455,6 +617,10 @@ function getCellVal(id,visited=new Set()){
   return v;
 }
 
+// Guard for mobile fns called before mobile JS block loads
+function mobSyncFormulaBar(){}
+function mobSyncAfterStatus(){}
+
 // ── FORMULA ENGINE ──────────────────────────────────────────────────
 
 // Split top-level comma-separated args (respects nested parens & quotes)
@@ -739,6 +905,7 @@ function selectRow(r){
 function updateFormulaBar(){
   document.getElementById('cell-ref-box').textContent=selCell||'';
   document.getElementById('formula-input').value=SD()[selCell]||'';
+  mobSyncFormulaBar();
 }
 
 function updateStatus(){
@@ -749,6 +916,7 @@ function updateStatus(){
   document.getElementById('st-sum').textContent=nums.length?numFmt(sum):'—';
   document.getElementById('st-avg').textContent=nums.length?numFmt(avg):'—';
   document.getElementById('st-cnt').textContent=nums.length||'—';
+  mobSyncAfterStatus();
 }
 
 // ══════════════════════════════════════════
@@ -911,8 +1079,30 @@ function ctxCopyCell(){clipboard=SD()[ctxCell];toast('Copiado');}
 // ══════════════════════════════════════════
 function renderTabs(){
   const bar=document.getElementById('tabsbar');
-  bar.innerHTML=sheetNames.map(n=>`<button class="sheet-tab${n===currentSheet?' active':''}" onclick="switchSheet('${n}')" ondblclick="renameSheetUI('${n}')">${n}</button>`).join('')+
-  `<button class="sheet-tab-add" onclick="addSheet()">＋</button>`;
+  bar.innerHTML=sheetNames.map((n,i)=>`
+    <div class="sheet-tab-wrap${n===currentSheet?' active':''}">
+      <button class="sheet-tab${n===currentSheet?' active':''}"
+        onclick="switchSheet('${n}')"
+        ondblclick="renameSheetUI('${n}')"
+        title="Doble toque para renombrar">
+        ${n}
+      </button>${sheetNames.length>1?`<button class="sheet-tab-del" onclick="deleteSheet('${n}')" title="Eliminar hoja">✕</button>`:''}</div>`).join('')+
+  `<button class="sheet-tab-add" onclick="addSheet()" title="Nueva hoja">＋</button>`;
+  setTimeout(()=>{
+    const active=bar.querySelector('.sheet-tab.active');
+    if(active)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  },50);
+}
+
+function deleteSheet(name){
+  if(sheetNames.length<=1){toast('No puedes eliminar la única hoja');return;}
+  if(!confirm(`¿Eliminar "${name}"? Se perderán sus datos.`))return;
+  const idx=sheetNames.indexOf(name);
+  sheetNames.splice(idx,1);
+  delete sheets[name];
+  if(currentSheet===name)currentSheet=sheetNames[Math.max(0,idx-1)];
+  renderAll();renderTabs();updateFormulaBar();
+  toast(`Hoja "${name}" eliminada`);
 }
 function switchSheet(name){
   if(isEditing)commitEdit();
@@ -1209,6 +1399,213 @@ setTimeout(()=>{
   document.getElementById('chart-range').value='A1:E8';
   renderChart();
 },300);
+
+
+// ── MOBILE ──────────────────────────────────────────────────────────
+function isMobile(){return window.innerWidth<=768;}
+
+// Redefine mobile sync functions (override the no-op guards above)
+mobSyncFormulaBar=function(){
+  if(!isMobile())return;
+  document.getElementById('mob-cell-ref').textContent=selCell||'';
+  document.getElementById('mob-formula-input').value=SD()[selCell]||'';
+};
+mobSyncAfterStatus=function(){
+  if(!isMobile())return;
+  const sum=document.getElementById('st-sum').textContent;
+  const avg=document.getElementById('st-avg').textContent;
+  const cnt=document.getElementById('st-cnt').textContent;
+  const ms=document.getElementById('mob-status');
+  if(ms)ms.style.display='flex';
+  const s=document.getElementById('mob-st-sum');const a=document.getElementById('mob-st-avg');const c=document.getElementById('mob-st-cnt');
+  if(s)s.textContent=sum;if(a)a.textContent=avg;if(c)c.textContent=cnt;
+};
+
+function onMobFormulaInput(){
+  const v=document.getElementById('mob-formula-input').value;
+  document.getElementById('formula-input').value=v;
+  onFormulaInput();
+}
+
+// Mobile sync — called at end of the real updateFormulaBar & updateStatus
+function mobSyncAfterFormulaBar(){
+  mobSyncFormulaBar();
+}
+function mobSyncAfterStatus(){
+  if(!isMobile())return;
+  const sum=document.getElementById('st-sum').textContent;
+  const avg=document.getElementById('st-avg').textContent;
+  const cnt=document.getElementById('st-cnt').textContent;
+  const ms=document.getElementById('mob-status');
+  if(ms)ms.style.display='flex';
+  const s=document.getElementById('mob-st-sum');const a=document.getElementById('mob-st-avg');const c=document.getElementById('mob-st-cnt');
+  if(s)s.textContent=sum;if(a)a.textContent=avg;if(c)c.textContent=cnt;
+}
+
+// Drawer
+function mobOpenDrawer(tab){
+  const drawer=document.getElementById('mob-drawer');
+  const title=document.getElementById('mob-drawer-title');
+  const body=document.getElementById('mob-drawer-body');
+  body.innerHTML='';
+
+  if(tab==='chart'){
+    title.textContent='Gráfico';
+    body.innerHTML=`
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px">Tipo</label>
+        <select id="mob-chart-type" class="filter-col-sel">
+          <option>bar</option><option>line</option><option>pie</option><option>doughnut</option>
+        </select>
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:5px">Rango</label>
+        <input id="mob-chart-range" class="filter-search" value="A1:E8" placeholder="ej: A1:E7">
+        <button class="panel-btn primary" style="margin-top:8px" onclick="mobRenderChart()">▶ Generar</button>
+        <button class="panel-btn" onclick="downloadChart()">↓ PNG</button>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius);padding:10px">
+        <canvas id="mob-chart-canvas" height="200"></canvas>
+      </div>`;
+  } else if(tab==='pivot'){
+    title.textContent='Tabla Dinámica';
+    const headers=[];for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(1,c));if(v)headers.push({label:v,c});}
+    const opts=headers.map(h=>`<option value="${h.c}">${h.label}</option>`).join('');
+    body.innerHTML=`
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Columna etiqueta</label>
+      <select id="mob-pivot-row" class="filter-col-sel">${opts}</select>
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Columna valores</label>
+      <select id="mob-pivot-val" class="filter-col-sel">${opts}</select>
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Agregación</label>
+      <select id="mob-pivot-agg" class="filter-col-sel"><option>SUM</option><option>AVERAGE</option><option>COUNT</option><option>MAX</option><option>MIN</option></select>
+      <button class="panel-btn primary" onclick="mobBuildPivot()">▶ Generar</button>
+      <div id="mob-pivot-result" style="margin-top:12px"></div>`;
+    if(headers.length>1)document.getElementById('mob-pivot-val').selectedIndex=1;
+  } else if(tab==='filter'){
+    title.textContent='Filtros';
+    const headers=[];for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(1,c));if(v)headers.push({label:v,c});}
+    const opts=headers.map(h=>`<option value="${h.c}">${h.label}</option>`).join('');
+    body.innerHTML=`
+      <select id="mob-filter-col" class="filter-col-sel" onchange="mobLoadFilterVals()">${opts}</select>
+      <input class="filter-search" id="mob-filter-search" placeholder="Buscar…" oninput="mobFilterSearch()">
+      <div id="mob-filter-values"></div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button class="panel-btn" onclick="selectAllFilter();mobLoadFilterVals()">Todo</button>
+        <button class="panel-btn" onclick="clearAllFilter();mobLoadFilterVals()">Ninguno</button>
+      </div>
+      <button class="panel-btn primary" style="margin-top:6px" onclick="applyFilterNow();mobCloseDrawer()">▶ Aplicar</button>
+      <button class="panel-btn" onclick="clearFilters();mobCloseDrawer()">✕ Quitar</button>`;
+    mobLoadFilterVals();
+  }
+
+  drawer.classList.add('open');
+}
+
+function mobCloseDrawer(){
+  document.getElementById('mob-drawer').classList.remove('open');
+}
+
+function mobRenderChart(){
+  const type=document.getElementById('mob-chart-type').value;
+  const rangeStr=document.getElementById('mob-chart-range').value.trim();
+  const m=rangeStr.match(/^([A-Z]+\d+):([A-Z]+\d+)$/i);
+  if(!m){return;}
+  const a=parseRef(m[1]),b=parseRef(m[2]);if(!a||!b)return;
+  const r1=Math.min(a.row,b.row),r2=Math.max(a.row,b.row),c1=Math.min(a.col,b.col),c2=Math.max(a.col,b.col);
+  const labels=[];for(let r=r1+1;r<=r2;r++)labels.push(String(getCellVal(cellId(r,c1))||r));
+  const COLORS=['#7c6af7','#3ecf8e','#f5a623','#4da6ff','#f25f5c'];
+  const datasets=[];
+  for(let c=c1+1;c<=c2;c++){
+    const vals=[];for(let r=r1+1;r<=r2;r++){const v=getCellVal(cellId(r,c));vals.push(isNaN(v)||v===''?0:Number(v));}
+    const col=COLORS[(c-c1-1)%COLORS.length];
+    datasets.push({label:String(getCellVal(cellId(r1,c))||colName(c)),data:vals,backgroundColor:col+'99',borderColor:col,borderWidth:1.5});
+  }
+  if(window._mobChart)window._mobChart.destroy();
+  Chart.defaults.color='#9090a8';Chart.defaults.borderColor='#333340';
+  window._mobChart=new Chart(document.getElementById('mob-chart-canvas'),{type,data:{labels,datasets},options:{responsive:true,plugins:{legend:{labels:{font:{size:9},boxWidth:8}}}}});
+}
+
+function mobBuildPivot(){
+  const rc=parseInt(document.getElementById('mob-pivot-row').value);
+  const vc=parseInt(document.getElementById('mob-pivot-val').value);
+  const agg=document.getElementById('mob-pivot-agg').value;
+  const groups={};
+  for(let r=2;r<=ROWS;r++){
+    const key=String(getCellVal(cellId(r,rc)));if(!key)continue;
+    const v=getCellVal(cellId(r,vc));const n=isNaN(v)?0:Number(v);
+    if(!groups[key])groups[key]=[];groups[key].push(n);
+  }
+  const results=Object.entries(groups).map(([k,vs])=>{
+    let v;
+    if(agg==='SUM')v=vs.reduce((s,x)=>s+x,0);
+    else if(agg==='AVERAGE')v=vs.reduce((s,x)=>s+x,0)/vs.length;
+    else if(agg==='COUNT')v=vs.length;
+    else if(agg==='MAX')v=Math.max(...vs);
+    else if(agg==='MIN')v=Math.min(...vs);
+    return{k,v};
+  }).sort((a,b)=>b.v-a.v);
+  const total=results.reduce((s,x)=>s+x.v,0)||1;
+  let html='<table class="pivot-table"><thead><tr><th>Valor</th><th>'+agg+'</th><th>%</th></tr></thead><tbody>';
+  results.forEach(({k,v})=>{
+    const pct=((v/total)*100).toFixed(1);
+    html+=`<tr><td>${k}</td><td style="text-align:right">${numFmt(v)}</td><td>${pct}%</td></tr>`;
+  });
+  html+=`<tr><td>TOTAL</td><td style="text-align:right;color:var(--accent3)" colspan="2">${numFmt(total)}</td></tr></table>`;
+  document.getElementById('mob-pivot-result').innerHTML=html;
+}
+
+function mobLoadFilterVals(){
+  const c=parseInt(document.getElementById('mob-filter-col').value);
+  const vals=new Set();
+  for(let r=2;r<=ROWS;r++){const v=String(getCellVal(cellId(r,c)));if(v)vals.add(v);}
+  filterState={};vals.forEach(v=>filterState[v]=true);
+  mobRenderFilterVals([...vals]);
+}
+function mobFilterSearch(){
+  const q=document.getElementById('mob-filter-search').value.toLowerCase();
+  const c=parseInt(document.getElementById('mob-filter-col').value);
+  const all=[...new Set(Array.from({length:ROWS-1},(_,i)=>String(getCellVal(cellId(i+2,c)))).filter(Boolean))];
+  mobRenderFilterVals(all.filter(v=>v.toLowerCase().includes(q)));
+}
+function mobRenderFilterVals(vals){
+  document.getElementById('mob-filter-values').innerHTML=vals.map(v=>`
+    <div class="filter-item">
+      <input type="checkbox" id="mfv-${v}" ${filterState[v]!==false?'checked':''} onchange="filterState['${v}']=this.checked">
+      <label for="mfv-${v}">${v}</label>
+    </div>`).join('');
+}
+
+// Touch swipe to close drawer
+(function(){
+  let startY=0;
+  document.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dy=e.changedTouches[0].clientY-startY;
+    const drawer=document.getElementById('mob-drawer');
+    if(drawer.classList.contains('open')&&dy>60)mobCloseDrawer();
+  },{passive:true});
+})();
+
+// Long press on sheet tab to rename (mobile)
+(function(){
+  let pressTimer=null;
+  document.getElementById('tabsbar').addEventListener('touchstart',e=>{
+    const tab=e.target.closest('.sheet-tab');
+    if(!tab)return;
+    const name=tab.textContent.trim();
+    pressTimer=setTimeout(()=>{renameSheetUI(name);},600);
+  },{passive:true});
+  document.getElementById('tabsbar').addEventListener('touchend',()=>{
+    clearTimeout(pressTimer);
+  },{passive:true});
+  document.getElementById('tabsbar').addEventListener('touchmove',()=>{
+    clearTimeout(pressTimer);
+  },{passive:true});
+})();
+
+// Move mob-status before tabsbar
+document.addEventListener('DOMContentLoaded',()=>{
+  const tabsbar=document.getElementById('tabsbar');
+  const mobStatus=document.getElementById('mob-status');
+  if(tabsbar&&mobStatus)tabsbar.parentNode.insertBefore(mobStatus,tabsbar);
+});
+
 </script>
-</body>
-</html>
