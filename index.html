@@ -1274,10 +1274,31 @@ function importFile(e){
     const reader=new FileReader();
     reader.onload=ev=>{
       const wb=XLSX.read(ev.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const json=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
-      json.forEach((row,ri)=>{if(ri>=ROWS)return;row.forEach((v,ci)=>{if(ci<COLS)SD()[cellId(ri+1,ci+1)]=String(v||'');});});
-      renderAll();toast('XLSX importado: '+wb.SheetNames[0]);
+      // Import ALL sheets
+      wb.SheetNames.forEach(sheetName=>{
+        // Reuse existing sheet or create new one
+        if(!sheetNames.includes(sheetName)){
+          sheetNames.push(sheetName);
+          initSheet(sheetName);
+        }
+        const ws=wb.Sheets[sheetName];
+        const json=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+        const target=sheets[sheetName].data;
+        json.forEach((row,ri)=>{
+          if(ri>=ROWS)return;
+          row.forEach((v,ci)=>{
+            if(ci>=COLS)return;
+            const val=String(v??'').trim();
+            if(val!=='')target[cellId(ri+1,ci+1)]=val;
+          });
+        });
+      });
+      // Switch to first imported sheet
+      currentSheet=wb.SheetNames[0];
+      renderAll();
+      renderTabs();
+      updateFormulaBar();
+      toast(`✓ ${wb.SheetNames.length} hoja${wb.SheetNames.length>1?'s':''} importada${wb.SheetNames.length>1?'s':''}: ${wb.SheetNames.join(', ')}`);
     };
     reader.readAsArrayBuffer(file);
   }
@@ -1306,17 +1327,31 @@ function exportCSV(){
 }
 
 function exportXLSX(){
-  const wsData=[];
-  for(let r=1;r<=ROWS;r++){
-    const row=[];
-    for(let c=1;c<=COLS;c++){const v=getCellVal(cellId(r,c));row.push(isNaN(v)||v===''?v:Number(v));}
-    wsData.push(row);
-  }
-  const ws=XLSX.utils.aoa_to_sheet(wsData);
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,currentSheet);
+  // Export ALL sheets
+  sheetNames.forEach(name=>{
+    const savedSheet=currentSheet;
+    // Temporarily read from each sheet
+    const sheetData=sheets[name]?.data||{};
+    const wsData=[];
+    for(let r=1;r<=ROWS;r++){
+      const row=[];
+      for(let c=1;c<=COLS;c++){
+        const raw=sheetData[cellId(r,c)]||'';
+        // Evaluate formulas for export
+        const prevSheet=currentSheet;
+        currentSheet=name;
+        const v=getCellVal(cellId(r,c));
+        currentSheet=prevSheet;
+        row.push(isNaN(v)||v===''?v:Number(v));
+      }
+      wsData.push(row);
+    }
+    const ws=XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  });
   XLSX.writeFile(wb,'planilla.xlsx');
-  toast('XLSX exportado');
+  toast(`✓ ${sheetNames.length} hoja${sheetNames.length>1?'s':''} exportada${sheetNames.length>1?'s':''}`);
 }
 
 function dl(name,url){const a=document.createElement('a');a.href=url;a.download=name;a.click();}
