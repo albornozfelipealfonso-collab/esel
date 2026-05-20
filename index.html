@@ -651,8 +651,9 @@ function findClose(s,open){
 }
 
 // Evaluate a single function call given its name and raw arg string
-function callFn(fn,rawArgs,visited){
-  // 1. Expand range refs A1:B3 -> list of values
+function callFn(fn,rawArgsRaw,visited){
+  // 1. Strip $ refs and expand ranges A1:B3 -> list of values
+  const rawArgs=rawArgsRaw.replace(/\$([A-Z]+)\$?(\d+)/g,'$1$2').replace(/([A-Z]+)\$(\d+)/g,'$1$2');
   const expanded=rawArgs.replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/g,(m,s,e)=>{
     return expandRange(s,e).map(id=>{
       const v=getCellVal(id,visited);
@@ -779,6 +780,10 @@ function callFn(fn,rawArgs,visited){
 function evalFormula(formula,visited){
   if(!formula||!formula.startsWith('='))return formula;
   let expr=formula.slice(1).trim();
+  // Strip absolute reference markers so $E$1 -> E1, $A1 -> A1, A$1 -> A1
+  expr=expr.replace(/\$([A-Z]+)\$(\d+)/g,'$1$2');
+  expr=expr.replace(/\$([A-Z]+)(\d+)/g,'$1$2');
+  expr=expr.replace(/([A-Z]+)\$(\d+)/g,'$1$2');
 
   // Iteratively resolve function calls, innermost first.
   // We find the LAST opening paren of a known function, which guarantees
@@ -1273,24 +1278,29 @@ function importFile(e){
   } else if(ext==='xlsx'||ext==='xls'){
     const reader=new FileReader();
     reader.onload=ev=>{
-      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const wb=XLSX.read(ev.target.result,{type:'array',cellFormula:true,cellNF:true,raw:false});
       // Import ALL sheets
       wb.SheetNames.forEach(sheetName=>{
-        // Reuse existing sheet or create new one
         if(!sheetNames.includes(sheetName)){
           sheetNames.push(sheetName);
           initSheet(sheetName);
         }
         const ws=wb.Sheets[sheetName];
-        const json=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
         const target=sheets[sheetName].data;
-        json.forEach((row,ri)=>{
-          if(ri>=ROWS)return;
-          row.forEach((v,ci)=>{
-            if(ci>=COLS)return;
-            const val=String(v??'').trim();
-            if(val!=='')target[cellId(ri+1,ci+1)]=val;
-          });
+        // Iterate raw cells to preserve formulas
+        Object.keys(ws).forEach(addr=>{
+          if(addr.startsWith('!'))return; // skip metadata
+          const ref=parseRef(addr);
+          if(!ref||ref.row>ROWS||ref.col>COLS)return;
+          const cell=ws[addr];
+          let val='';
+          if(cell.f){
+            // Has formula — restore it with = prefix
+            val='='+cell.f;
+          } else if(cell.v!==undefined&&cell.v!==null){
+            val=String(cell.v);
+          }
+          if(val!=='')target[cellId(ref.row,ref.col)]=val;
         });
       });
       // Switch to first imported sheet
@@ -1330,24 +1340,31 @@ function exportXLSX(){
   const wb=XLSX.utils.book_new();
   // Export ALL sheets
   sheetNames.forEach(name=>{
-    const savedSheet=currentSheet;
-    // Temporarily read from each sheet
     const sheetData=sheets[name]?.data||{};
-    const wsData=[];
-    for(let r=1;r<=ROWS;r++){
-      const row=[];
-      for(let c=1;c<=COLS;c++){
-        const raw=sheetData[cellId(r,c)]||'';
-        // Evaluate formulas for export
-        const prevSheet=currentSheet;
-        currentSheet=name;
-        const v=getCellVal(cellId(r,c));
-        currentSheet=prevSheet;
-        row.push(isNaN(v)||v===''?v:Number(v));
+    const ws={};
+    let maxR=1,maxC=1;
+    Object.keys(sheetData).forEach(id=>{
+      const ref=parseRef(id);if(!ref)return;
+      const raw=sheetData[id]||'';
+      if(!raw)return;
+      maxR=Math.max(maxR,ref.row);maxC=Math.max(maxC,ref.col);
+      const cell={};
+      if(typeof raw==='string'&&raw.startsWith('=')){
+        // Export as formula so Excel recalculates it
+        cell.t='n';
+        cell.f=raw.slice(1);
+        // Also store last calculated value as fallback
+        const prevSheet=currentSheet;currentSheet=name;
+        const v=getCellVal(id);currentSheet=prevSheet;
+        cell.v=isNaN(v)||v===''?0:Number(v);
+      } else if(!isNaN(raw)&&raw!==''){
+        cell.t='n';cell.v=Number(raw);
+      } else {
+        cell.t='s';cell.v=String(raw);
       }
-      wsData.push(row);
-    }
-    const ws=XLSX.utils.aoa_to_sheet(wsData);
+      ws[id]=cell;
+    });
+    ws['!ref']=`A1:${colName(maxC)}${maxR}`;
     XLSX.utils.book_append_sheet(wb,ws,name);
   });
   XLSX.writeFile(wb,'planilla.xlsx');
