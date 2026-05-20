@@ -172,24 +172,28 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 ══════════════════════════════════════════ */
 
 /* Mobile toolbar */
-#mob-bar{display:none;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:48px}
-#mob-logo{padding:0 14px;font-weight:600;font-size:14px;color:var(--accent3);border-right:1px solid var(--border);height:100%;display:flex;align-items:center;gap:6px}
-#mob-actions{display:flex;align-items:center;gap:2px;padding:0 8px;flex:1;overflow-x:auto}
-.mob-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:6px 10px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-radius:var(--radius);min-width:44px;min-height:44px;font-size:9px;font-family:var(--font-ui)}
-.mob-btn:active{background:var(--bg3);color:var(--accent3)}
-.mob-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#mob-bar{display:none;flex-direction:column;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+#mob-logo-row{display:flex;align-items:center;padding:0 14px;height:44px;border-bottom:1px solid var(--border);gap:8px}
+#mob-logo-row span{font-weight:600;font-size:15px;color:var(--accent3)}
+#mob-actions{display:flex;align-items:center;gap:4px;padding:6px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#mob-actions::-webkit-scrollbar{display:none}
+.mob-btn{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;padding:8px 12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;border-radius:8px;min-width:52px;font-size:10px;font-family:var(--font-ui);flex-shrink:0;white-space:nowrap}
+.mob-btn:active{background:rgba(124,106,247,0.2);color:var(--accent3);border-color:var(--accent)}
+.mob-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.mob-btn-label{display:block;font-size:9px;color:inherit;margin-top:1px}
 
 /* Mobile formula bar */
-#mob-formulabar{display:none;align-items:center;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:40px}
-#mob-cell-ref{width:60px;padding:0 8px;font-family:var(--font-mono);font-size:11px;background:var(--bg3);border-right:1px solid var(--border);height:100%;display:flex;align-items:center;color:var(--accent3);font-weight:500;flex-shrink:0}
-#mob-formula-input{flex:1;height:100%;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-mono);font-size:12px;padding:0 10px;caret-color:var(--accent3)}
+#mob-formulabar{display:none;align-items:center;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;height:44px}
+#mob-cell-ref{width:70px;padding:0 10px;font-family:var(--font-mono);font-size:12px;background:var(--bg3);border-right:1px solid var(--border2);height:100%;display:flex;align-items:center;color:var(--accent3);font-weight:600;flex-shrink:0}
+#mob-formula-input{flex:1;height:100%;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:0 12px;caret-color:var(--accent3)}
 
 /* Mobile cell size */
 @media(max-width:768px){
   body{font-size:12px}
   :root{--cell-h:36px;--col-w:80px;--row-head-w:36px}
   #topbar,#formulabar{display:none!important}
-  #mob-bar,#mob-formulabar{display:flex}
+  #mob-bar{display:flex}
+  #mob-formulabar{display:flex}
   #sidepanel{display:none}
   #workspace{flex-direction:column}
 
@@ -269,35 +273,51 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
 
 <!-- MOBILE TOP BAR -->
 <div id="mob-bar">
-  <div id="mob-logo">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a89af9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-    Planilla
+  <div id="mob-logo-row">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a89af9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    <span>Planilla</span>
   </div>
   <div id="mob-actions">
     <button class="mob-btn" onclick="exportXLSX()">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>XLSX
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="mob-btn-label">XLSX</span>
     </button>
     <button class="mob-btn" onclick="exportCSV()">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="mob-btn-label">CSV</span>
     </button>
     <label class="mob-btn">
-      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="mob-btn-label">Importar</span>
       <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
     </label>
     <button class="mob-btn" onclick="toggleFormat('bold')">
-      <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>Bold
+      <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
+      <span class="mob-btn-label">Negrita</span>
+    </button>
+    <button class="mob-btn" onclick="toggleFormat('italic')">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+      <span class="mob-btn-label">Cursiva</span>
     </button>
     <button class="mob-btn" onclick="mobOpenDrawer('chart')">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Gráfico
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="mob-btn-label">Gráfico</span>
     </button>
     <button class="mob-btn" onclick="mobOpenDrawer('pivot')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Pivot
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <span class="mob-btn-label">Pivot</span>
     </button>
     <button class="mob-btn" onclick="mobOpenDrawer('filter')">
-      <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filtro
+      <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span class="mob-btn-label">Filtrar</span>
     </button>
     <button class="mob-btn" onclick="saveLocal()">
-      <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Guardar
+      <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span class="mob-btn-label">Guardar</span>
+    </button>
+    <button class="mob-btn" onclick="loadLocal()">
+      <svg viewBox="0 0 24 24"><path d="M3 15v4c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span class="mob-btn-label">Cargar</span>
     </button>
   </div>
 </div>
