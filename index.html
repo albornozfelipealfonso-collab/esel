@@ -353,7 +353,7 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
     <label class="mob-btn">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span class="mob-btn-label">Importar</span>
-      <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
+      <input type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="importFile(event)">
     </label>
     <button class="mob-btn" onclick="toggleFormat('bold')">
       <svg viewBox="0 0 24 24"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
@@ -429,7 +429,7 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
       </button>
       <label class="tb-btn" title="Importar CSV/XLSX">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar
-        <input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(event)">
+        <input type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="importFile(event)">
       </label>
     </div>
     <div class="menu-group">
@@ -1350,8 +1350,11 @@ function importFile(e){
   const name=file.name||'';
   const ext=name.includes('.')?name.split('.').pop().toLowerCase():'';
   const mime=file.type||'';
-  const isXLSX=ext==='xlsx'||ext==='xls'||mime.includes('spreadsheet')||mime.includes('excel');
-  const isCSV=ext==='csv'||mime.includes('csv')||mime.includes('text/plain');
+  const isXLSX=ext==='xlsx'||ext==='xls'
+    ||mime.includes('spreadsheet')||mime.includes('excel')
+    ||mime.includes('openxmlformats')||mime.includes('ms-excel')
+    ||(!ext&&!mime); // unknown type on Android — try as xlsx
+  const isCSV=!isXLSX&&(ext==='csv'||mime.includes('csv')||mime.includes('text/plain'));
 
   if(isCSV){
     const reader=new FileReader();
@@ -1372,9 +1375,9 @@ function importFile(e){
     reader.readAsText(file);
   } else if(isXLSX){
     const reader=new FileReader();
-    reader.onload=ev=>{
+    const processXLSX=(arrayBuffer)=>{
       try{
-        const wb=XLSX.read(ev.target.result,{type:'array',cellFormula:true,cellNF:true,raw:false});
+        const wb=XLSX.read(arrayBuffer,{type:'array',cellFormula:true,cellNF:true,raw:false});
         if(!wb||!wb.SheetNames||wb.SheetNames.length===0){
           toast('El archivo no tiene hojas válidas');return;
         }
@@ -1407,17 +1410,40 @@ function importFile(e){
           });
         });
         currentSheet=wb.SheetNames[0];
-        // Rebuild grid if needed
+        // Debug: count cells loaded per sheet
+        let totalCells=0;
+        wb.SheetNames.forEach(sn=>{totalCells+=Object.keys(sheets[sn]?.data||{}).length;});
+        console.log('Sheets:',wb.SheetNames,'Current:',currentSheet,'Cells:',totalCells);
+        console.log('Sheet data sample:',Object.entries(sheets[currentSheet]?.data||{}).slice(0,5));
+        // Rebuild grid and render
         buildGrid();
-        renderAll();renderTabs();updateFormulaBar();
-        toast('✓ '+wb.SheetNames.length+' hoja'+(wb.SheetNames.length>1?'s':'')+' importada'+(wb.SheetNames.length>1?'s':'')+': '+wb.SheetNames.join(', '));
+        renderAll();
+        renderTabs();
+        updateFormulaBar();
+        // Switch to first sheet explicitly
+        switchSheet(wb.SheetNames[0]);
+        toast('✓ '+wb.SheetNames.length+' hoja'+(wb.SheetNames.length>1?'s':'')+' ('+totalCells+' celdas): '+wb.SheetNames.join(', '));
       }catch(err){
-        toast('Error al importar: '+err.message);
+        toast('Error: '+err.message);
         console.error(err);
       }
     };
-    reader.onerror=()=>toast('Error al leer el archivo');
-    reader.readAsArrayBuffer(file);
+    reader.onload=ev=>processXLSX(ev.target.result);
+    reader.onerror=async()=>{
+      // Fallback for Android: use file.arrayBuffer() directly
+      try{
+        const buf=await file.arrayBuffer();
+        processXLSX(buf);
+      }catch(e){toast('No se pudo leer el archivo: '+e.message);}
+    };
+    // On Android, try arrayBuffer() first if available
+    if(file.arrayBuffer){
+      file.arrayBuffer().then(buf=>processXLSX(buf)).catch(()=>{
+        reader.readAsArrayBuffer(file);
+      });
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
   } else {
     toast('Formato no soportado. Usa .xlsx o .csv');
   }
