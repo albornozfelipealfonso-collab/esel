@@ -243,6 +243,48 @@ input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:po
     border-color:var(--accent3);
     font-weight:600;
   }
+  .sheet-tab-wrap{
+    display:inline-flex !important;
+    align-items:center;
+    border:1.5px solid var(--border2);
+    border-radius:8px;
+    overflow:hidden;
+    background:var(--bg4);
+    flex-shrink:0;
+    height:36px;
+  }
+  .sheet-tab-wrap.active{
+    border-color:var(--accent3);
+    background:rgba(124,106,247,0.25);
+  }
+  .sheet-tab-wrap .sheet-tab{
+    border:none !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    height:36px;
+    padding:0 16px;
+    display:flex;
+    align-items:center;
+  }
+  .sheet-tab-wrap .sheet-tab.active{
+    background:transparent !important;
+    color:#fff;
+    font-weight:600;
+  }
+  .sheet-tab-del{
+    width:28px;
+    height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    border-left:1px solid var(--border2) !important;
+    border:none;
+    background:transparent;
+    color:var(--text3);
+    cursor:pointer;
+    flex-shrink:0;
+  }
   .sheet-tab-add{
     padding:8px 16px;
     height:36px;
@@ -1299,13 +1341,17 @@ function importFile(e){
     const reader=new FileReader();
     reader.onload=ev=>{
       const wb=XLSX.read(ev.target.result,{type:'array',cellFormula:true,cellNF:true,raw:false});
+      // Clear ALL existing sheets and start fresh with imported ones
+      sheets={};
+      sheetNames=[];
       // Import ALL sheets
       wb.SheetNames.forEach(sheetName=>{
-        if(!sheetNames.includes(sheetName)){
-          sheetNames.push(sheetName);
-          initSheet(sheetName);
-        }
+        sheetNames.push(sheetName);
+        initSheet(sheetName);
         const ws=wb.Sheets[sheetName];
+        // Clear existing data before importing
+        sheets[sheetName].data={};
+        sheets[sheetName].styles={};
         const target=sheets[sheetName].data;
         // Iterate raw cells to preserve formulas
         Object.keys(ws).forEach(addr=>{
